@@ -1,0 +1,66 @@
+name: Windows Release Build
+
+on:
+  push:
+    branches:
+      - chatgpt/windows-build
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure (VS 2022 x64)
+        shell: pwsh
+        run: cmake -S doa3 -B doa3/build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build Release
+        shell: pwsh
+        run: cmake --build doa3/build --config Release --target doa3 --parallel
+
+      - name: Verify executable
+        shell: pwsh
+        run: |
+          $exe = "doa3/build/release/doa3.exe"
+          if (-not (Test-Path $exe)) {
+            throw "Expected build output not found: $exe"
+          }
+          Get-Item $exe | Format-List FullName,Length,LastWriteTime
+
+      - name: Package Windows build
+        shell: pwsh
+        run: |
+          $pkg = "dist/DOA3-Recomp-Windows-x64"
+          New-Item -ItemType Directory -Force -Path $pkg | Out-Null
+          Copy-Item "doa3/build/release/doa3.exe" "$pkg/doa3.exe"
+          Copy-Item "README.md" "$pkg/README.md"
+          @'
+          Dead or Alive 3 - Windows x64 static recompilation build
+
+          This package contains only the open-source recompilation executable.
+          Dead or Alive 3 game files are NOT included.
+
+          To run:
+          1. Keep this repository/project folder as `doa3` or create a `doa3` folder for it.
+          2. Extract your legally owned Dead or Alive 3 disc image to a sibling folder named
+             `doa3gamefiles` so `doa3gamefiles/default.xbe` exists.
+          3. Run `doa3.exe` from the build/project location expected by the project.
+
+          See README.md for the project's current runtime notes.
+          '@ | Set-Content -Encoding UTF8 "$pkg/WINDOWS_BUILD_README.txt"
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: DOA3-Recomp-Windows-x64
+          path: dist/DOA3-Recomp-Windows-x64
+          if-no-files-found: error
+          compression-level: 9
