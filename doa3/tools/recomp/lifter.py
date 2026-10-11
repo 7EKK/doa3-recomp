@@ -18,7 +18,9 @@ import re
 import struct
 
 from .disasm import Instruction, Operand
-from .config import is_code_address, is_data_address, va_to_file_offset, KERNEL_THUNK_ADDR
+from .config import (is_code_address, is_data_address, va_to_file_offset, KERNEL_THUNK_ADDR, FTOL2_ADDR,
+                     LEGACY_ICALL_FUNCS, LEGACY_FTOL2_CALL_FUNCS, LEGACY_FNSTSW_AH_FUNCS,
+                     LEGACY_CONDTAIL_SYNC_FUNCS)
 
 
 # ── Operand formatting ──────────────────────────────────────
@@ -375,6 +377,10 @@ _EFLAGS_PRESERVE = frozenset({
 
 
 
+def _narrow_expr(expr):
+    return expr.lstrip("(").startswith(("LO8(", "HI8(", "MEM8(", "LO16(", "MEM16("))
+
+
 def _sign_cast(expr):
     """C cast that reproduces the x86 sign flag for the operand width of a lifted
     expression (DOA3 2026-09-20: `test al,al / jns` was emitted as a 32-bit
@@ -475,6 +481,13 @@ def _make_condition(jcc, flag_setter, flag_ops):
 
     # ── test: flags from (a & b), operands unchanged ──
     if flag_setter == "test":
+        if jcc in ("jge", "jle", "jg") and _narrow_expr(lhs):
+            s_, z_ = f"TEST_S({lhs}, {rhs})", f"TEST_Z({lhs}, {rhs})"
+            if jcc == "jge":
+                return f"!{s_}", desc
+            if jcc == "jle":
+                return f"({s_} || {z_})", desc
+            return f"(!{s_} && !{z_})", desc
         if test_macro:
             return f"{test_macro}({lhs}, {rhs})", desc
         if cmp_macro:
@@ -732,9 +745,12 @@ def _emit_cond_goto(cond_expr, jcc, desc, target, lifter):
         return f"if ({cond_expr}) {{ /* {jcc}: {desc} - indirect */ }}"
     if lifter and lifter._is_external_target(target):
         name = lifter._call_target_name(target)
-        # Conditional tail-jmp: sync g_seh_ebp like the unconditional tail-jmp does,
-        # so fpo_leaf callees inherit the CURRENT frame pointer (not a stale one).
-        return (f"if ({cond_expr}) {{ g_seh_ebp = ebp; {name}(); return; }}"
+        # Conditional tail-jmp. The g_seh_ebp sync is added by the translator
+        # in functions that keep a local ebp (fix_cond_tailcall_ebp).
+        if lifter.func_start in LEGACY_CONDTAIL_SYNC_FUNCS:
+            return (f"if ({cond_expr}) {{ g_seh_ebp = ebp; {name}(); return; }}"
+                    f" /* {jcc}: {desc} */")
+        return (f"if ({cond_expr}) {{ {name}(); return; }}"
                 f" /* {jcc}: {desc} */")
     return f"if ({cond_expr}) goto loc_{target:08X}; /* {jcc}: {desc} */"
 
@@ -1266,6 +1282,12 @@ class Lifter:
         # x86 'call' pushes return address then jumps.
         # With global esp, we push a dummy return address (0) then call.
         # The callee's 'ret' will pop it back off.
+        if insn.call_target == FTOL2_ADDR and self.func_start not in LEGACY_FTOL2_CALL_FUNCS:
+            # CRT _ftol2 converts the CALLER's x87 stack top (recomp bug #8);
+            # done inline so the value is popped from the right stack.
+            return ["{ int64_t _ft = (int64_t)fp_top(); fp_popp(); "
+                    "eax = (uint32_t)_ft; edx = (uint32_t)((uint64_t)_ft >> 32); } "
+                    "/* inline _ftol2 (bug #8) */"]
         if insn.call_target:
             name = self._call_target_name(insn.call_target)
             lines = [f"PUSH32(esp, 0); {name}(); /* call 0x{insn.call_target:08X} */"]
@@ -1279,6 +1301,8 @@ class Lifter:
             # For esp-relative targets (e.g. `call [esp+0xC]`), pushing first shifts esp
             # so MEM32(esp+X) would read the wrong slot (the just-pushed dummy). The
             # original x86 reads the target at the pre-push esp.
+            if self.func_start in LEGACY_ICALL_FUNCS:
+                return [f"PUSH32(esp, 0); RECOMP_ICALL_SAFE({target}, _icall_esp); /* indirect call */"]
             return [f"{{ uint32_t _icall_t = {target}; PUSH32(esp, 0); "
                     f"RECOMP_ICALL_SAFE(_icall_t, _icall_esp); }} /* indirect call */"]
         return ["/* call: no target */"]
@@ -1863,8 +1887,13 @@ class Lifter:
             # From _fpu_cmp: less -> C0, equal -> C3, greater -> none.
             # (bug #9: this was a comment only — the following `test ah, X;
             # jcc` read whatever happened to be in eax.)
-            if (insn.op_str or "").strip() == "ax":
+            if (insn.op_str or "").strip() == "ax" and self.func_start in LEGACY_FNSTSW_AH_FUNCS:
                 return [f"SET_HI8(eax, (_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)); /* fnstsw ax */"]
+            if (insn.op_str or "").strip() == "ax":
+                # The whole status word is stored to ax: AL takes the
+                # (masked, so clear) exception bits.
+                return ["eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | "
+                        "(_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */"]
             return [f"/* fnstsw {insn.op_str} - store FPU status word */"]
         if m == "fnstcw":
             # The control word is real state: the CRT's _ctrlfp reads it back
