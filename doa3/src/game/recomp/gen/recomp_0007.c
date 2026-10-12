@@ -20459,7 +20459,6 @@ loc_0013A83A: ;
     esp += 4; return; /* ret */
 
     g_seh_ebp = ebp; sub_0013A816(); return; /* DOA3: restored dropped fall-through to sub_0013A816 */
-
 }
 
 /**
@@ -22603,7 +22602,7 @@ loc_0013BA74: ;
 
 loc_0013BA8B: ;
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED554)) ? -1 : (fp_top() > (double)MEMF(0x1ED554)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x1ed554] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_0013BADF; /* jp: parity */
 
 loc_0013BA98: ;
@@ -22693,7 +22692,7 @@ loc_0013BB52: ;
 loc_0013BB5F: ;
     fp_push(MEMF(esi + 0x30)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED528)) ? -1 : (fp_top() > (double)MEMF(0x1ED528)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x1ed528] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_NZ(HI8(eax), 0x41)) goto loc_0013BC95; /* jne: not equal / not zero */
 
 loc_0013BB73: ;
@@ -30831,7 +30830,7 @@ loc_0014019F: ;
 loc_001401A0: ;
     fp_push(MEMF(esi + 0x20)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED528)) ? -1 : (fp_top() > (double)MEMF(0x1ED528)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x1ed528] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((!X86_PF8((HI8(eax)) & (0x41)))) goto loc_00140272; /* jnp: not parity */
 
 loc_001401B4: ;
@@ -30896,7 +30895,7 @@ loc_00140246: ;
     fp_push(MEMF(edi + -12)); /* fld float */
     fp_top() = fp_top() - (double)MEMF(0x1ED480); /* fsub mem */
     _fpu_cmp = (fp_top() < (double)MEMF(esi + 4)) ? -1 : (fp_top() > (double)MEMF(esi + 4)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [esi + 4] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_NZ(HI8(eax), 0x41)) goto loc_00140272; /* jne: not equal / not zero */
 
 loc_00140259: ;
@@ -30905,7 +30904,7 @@ loc_00140259: ;
 loc_0014025B: ;
     fp_push(MEMF(esi + 4)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(edi + -12)) ? -1 : (fp_top() > (double)MEMF(edi + -12)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [edi - 0xc] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_00140272; /* jp: parity */
 
 loc_00140268: ;
@@ -31058,7 +31057,7 @@ loc_0014037F: ;
 loc_00140380: ;
     fp_push(MEMF(esi + 0x20)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED528)) ? -1 : (fp_top() > (double)MEMF(0x1ED528)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x1ed528] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((!X86_PF8((HI8(eax)) & (0x41)))) goto loc_00140452; /* jnp: not parity */
 
 loc_00140394: ;
@@ -31123,7 +31122,7 @@ loc_00140426: ;
     fp_push(MEMF(edi + -12)); /* fld float */
     fp_top() = fp_top() - (double)MEMF(0x1ED480); /* fsub mem */
     _fpu_cmp = (fp_top() < (double)MEMF(esi + 4)) ? -1 : (fp_top() > (double)MEMF(esi + 4)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [esi + 4] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_NZ(HI8(eax), 0x41)) goto loc_00140452; /* jne: not equal / not zero */
 
 loc_00140439: ;
@@ -31132,7 +31131,7 @@ loc_00140439: ;
 loc_0014043B: ;
     fp_push(MEMF(esi + 4)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(edi + -12)) ? -1 : (fp_top() > (double)MEMF(edi + -12)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [edi - 0xc] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_00140452; /* jp: parity */
 
 loc_00140448: ;
@@ -31524,7 +31523,7 @@ loc_001406DE: ;
 
 loc_001406E3: ;
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED744)) ? -1 : (fp_top() > (double)MEMF(0x1ED744)) ? 1 : 0; /* fcom dword ptr [0x1ed744] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_001406F8; /* jp: parity */
 
 loc_001406F0: ;
@@ -31615,7 +31614,7 @@ loc_001407B5: ;
     fp_push(MEMF(edx + 4)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED528)) ? -1 : (fp_top() > (double)MEMF(0x1ED528)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x1ed528] */
     fp_push(MEMF(edx + 4)); /* fld float */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_Z(HI8(eax), 0x41)) goto loc_001407F1; /* je: equal / zero */
 
 loc_001407EF: ;
@@ -31634,7 +31633,7 @@ loc_001407F1: ;
     fp_popp(); /* fstp st(0) = pop */
     fp_push(MEMF(esp + 0x20)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED528)) ? -1 : (fp_top() > (double)MEMF(0x1ED528)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x1ed528] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     /* test HI8(eax), 5 - flags set for next jcc */
     MEM32(edi + 0x2C) = edx;
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_00140828; /* jp: parity */
@@ -31686,7 +31685,7 @@ loc_0014086B: ;
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED754)) ? -1 : (fp_top() > (double)MEMF(0x1ED754)) ? 1 : 0; /* fcom dword ptr [0x1ed754] */
     SET_LO8(eax, LO8(eax) + 1);
     MEM8(esi + 0x26) = LO8(eax);
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_00140887; /* jp: parity */
 
 loc_0014087D: ;
@@ -31696,7 +31695,7 @@ loc_0014087D: ;
 
 loc_00140887: ;
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED744)) ? -1 : (fp_top() > (double)MEMF(0x1ED744)) ? 1 : 0; /* fcom dword ptr [0x1ed744] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_NZ(HI8(eax), 0x41)) goto loc_0014089C; /* jne: not equal / not zero */
 
 loc_00140894: ;
@@ -31756,7 +31755,7 @@ loc_00140920: ;
 
 loc_00140925: ;
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED754)) ? -1 : (fp_top() > (double)MEMF(0x1ED754)) ? 1 : 0; /* fcom dword ptr [0x1ed754] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_0014093C; /* jp: parity */
 
 loc_00140932: ;
@@ -31766,7 +31765,7 @@ loc_00140932: ;
 
 loc_0014093C: ;
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED744)) ? -1 : (fp_top() > (double)MEMF(0x1ED744)) ? 1 : 0; /* fcom dword ptr [0x1ed744] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_NZ(HI8(eax), 0x41)) goto loc_00140951; /* jne: not equal / not zero */
 
 loc_00140949: ;
@@ -31779,7 +31778,7 @@ loc_00140951: ;
     fp_top() = fp_top() * (double)MEMF(0x1ED74C); /* fmul mem */
     MEMF(edi + 0x24) = (float)fp_top(); fp_popp(); /* fstp */
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED480)) ? -1 : (fp_top() > (double)MEMF(0x1ED480)) ? 1 : 0; /* fcom dword ptr [0x1ed480] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_NZ(HI8(eax), 0x41)) goto loc_00140974; /* jne: not equal / not zero */
 
 loc_0014096C: ;
@@ -31981,7 +31980,7 @@ loc_00140A80: ;
 
 loc_00140A85: ;
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED744)) ? -1 : (fp_top() > (double)MEMF(0x1ED744)) ? 1 : 0; /* fcom dword ptr [0x1ed744] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_00140A9A; /* jp: parity */
 
 loc_00140A92: ;
@@ -32070,7 +32069,7 @@ loc_00140B56: ;
     fp_push(MEMF(edx + 4)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED528)) ? -1 : (fp_top() > (double)MEMF(0x1ED528)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x1ed528] */
     fp_push(MEMF(edx + 4)); /* fld float */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_Z(HI8(eax), 0x41)) goto loc_00140B96; /* je: equal / zero */
 
 loc_00140B94: ;
@@ -32089,7 +32088,7 @@ loc_00140B96: ;
     fp_popp(); /* fstp st(0) = pop */
     fp_push(MEMF(esp + 0x24)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED528)) ? -1 : (fp_top() > (double)MEMF(0x1ED528)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x1ed528] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     /* test HI8(eax), 5 - flags set for next jcc */
     MEM32(edi + 0x2C) = edx;
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_00140BD0; /* jp: parity */
@@ -32108,7 +32107,7 @@ loc_00140BD0: ;
     fp_push(MEMF(esp + 0x24)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED51C)) ? -1 : (fp_top() > (double)MEMF(0x1ED51C)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x1ed51c] */
     fp_push(MEMF(esp + 0x24)); /* fld float */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     PUSH32(esp, 0); sub_0018DB30(); /* call 0x0018DB30 */
 
 loc_00140BE5: ;
@@ -32148,7 +32147,7 @@ loc_00140C28: ;
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED754)) ? -1 : (fp_top() > (double)MEMF(0x1ED754)) ? 1 : 0; /* fcom dword ptr [0x1ed754] */
     SET_LO8(eax, LO8(eax) + 1);
     MEM8(esi + 0x26) = LO8(eax);
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_00140C44; /* jp: parity */
 
 loc_00140C3A: ;
@@ -32158,7 +32157,7 @@ loc_00140C3A: ;
 
 loc_00140C44: ;
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED744)) ? -1 : (fp_top() > (double)MEMF(0x1ED744)) ? 1 : 0; /* fcom dword ptr [0x1ed744] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_NZ(HI8(eax), 0x41)) goto loc_00140C59; /* jne: not equal / not zero */
 
 loc_00140C51: ;
@@ -32211,7 +32210,7 @@ loc_00140CD1: ;
 
 loc_00140CDE: ;
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED754)) ? -1 : (fp_top() > (double)MEMF(0x1ED754)) ? 1 : 0; /* fcom dword ptr [0x1ed754] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_00140CF5; /* jp: parity */
 
 loc_00140CEB: ;
@@ -32221,7 +32220,7 @@ loc_00140CEB: ;
 
 loc_00140CF5: ;
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED744)) ? -1 : (fp_top() > (double)MEMF(0x1ED744)) ? 1 : 0; /* fcom dword ptr [0x1ed744] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_NZ(HI8(eax), 0x41)) goto loc_00140D0A; /* jne: not equal / not zero */
 
 loc_00140D02: ;
@@ -32234,7 +32233,7 @@ loc_00140D0A: ;
     fp_top() = fp_top() * (double)MEMF(0x1ED74C); /* fmul mem */
     MEMF(edi + 0x24) = (float)fp_top(); fp_popp(); /* fstp */
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED480)) ? -1 : (fp_top() > (double)MEMF(0x1ED480)) ? 1 : 0; /* fcom dword ptr [0x1ed480] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_NZ(HI8(eax), 0x41)) goto loc_00140D2D; /* jne: not equal / not zero */
 
 loc_00140D25: ;
@@ -34048,7 +34047,7 @@ loc_00141EE1: ;
  */
 void sub_00141EE8(void)
 {
-    int _rcc = 0; /* DOA3 bug #14: condition evaluated at the compare */
+    int _rcc = 0; /* DOA3: deferred condition evaluated at the compare */
     uint32_t ebp;
     int _flags = 0; /* fallback flag var */
     int _fpu_cmp = 0; /* FPU compare result: -1/0/1 */
@@ -34324,7 +34323,7 @@ loc_0014219C: ;
     MEMF(esi + -16) = (float)fp_top(); fp_popp(); /* fstp */
     fp_push(MEMF(esp + 0x14)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x207690)) ? -1 : (fp_top() > (double)MEMF(0x207690)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x207690] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_Z(HI8(eax), 0x41)) goto loc_0014220D; /* je: equal / zero */
 
 loc_00142205: ;
@@ -34338,7 +34337,7 @@ loc_0014220D: ;
     MEMF(esi + -4) = (float)fp_top(); fp_popp(); /* fstp */
     fp_push(MEMF(esp + 0x14)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x207690)) ? -1 : (fp_top() > (double)MEMF(0x207690)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x207690] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_Z(HI8(eax), 0x41)) goto loc_0014223C; /* je: equal / zero */
 
 loc_00142234: ;
@@ -34358,7 +34357,7 @@ loc_0014223C: ;
     fp_popp(); /* fstp st(0) = pop */
     fp_push(MEMF(esp + 0x18)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED754)) ? -1 : (fp_top() > (double)MEMF(0x1ED754)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x1ed754] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_00142277; /* jp: parity */
 
 loc_0014226F: ;
@@ -34480,7 +34479,7 @@ loc_00142395: ;
     MEMF(esi + -12) = (float)fp_top(); fp_popp(); /* fstp */
     fp_push(MEMF(esp + 0x14)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x207690)) ? -1 : (fp_top() > (double)MEMF(0x207690)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x207690] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_Z(HI8(eax), 0x41)) goto loc_001423CC; /* je: equal / zero */
 
 loc_001423C4: ;
@@ -34493,7 +34492,7 @@ loc_001423CC: ;
     MEMF(esi + -4) = (float)fp_top(); fp_popp(); /* fstp */
     fp_push(MEMF(esp + 0x14)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x207690)) ? -1 : (fp_top() > (double)MEMF(0x207690)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x207690] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_Z(HI8(eax), 0x41)) goto loc_001423F7; /* je: equal / zero */
 
 loc_001423EF: ;
@@ -34869,7 +34868,7 @@ loc_001427B3: ;
     MEM32(esp + 0x48) = 1;
     fp_push(MEMF(esp + 0x14)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x207690)) ? -1 : (fp_top() > (double)MEMF(0x207690)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x207690] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_Z(HI8(eax), 0x41)) goto loc_001427D7; /* je: equal / zero */
 
 loc_001427CF: ;
@@ -34882,7 +34881,7 @@ loc_001427D7: ;
     MEMF(esi + -4) = (float)fp_top(); fp_popp(); /* fstp */
     fp_push(MEMF(esp + 0x14)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x207690)) ? -1 : (fp_top() > (double)MEMF(0x207690)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x207690] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_Z(HI8(eax), 0x41)) goto loc_00142801; /* je: equal / zero */
 
 loc_001427F9: ;
@@ -34909,7 +34908,7 @@ loc_00142801: ;
 
 loc_00142846: ;
     /* cmp MEM8(esp + 0x54), 1 - flags set for next jcc */
-    _rcc = (CMP_NE(MEM8(esp + 0x54), 1));  /* DOA3 bug #14: the guest sets these flags at 00142846 and the branch at 00142855 reads them; esp is overwritten in between, so the condition is evaluated here, where x86 evaluates it. */
+    _rcc = (CMP_NE(MEM8(esp + 0x54), 1));  /* DOA3: x86 latched these flags at the compare above and the branch below reads them, but an operand is overwritten in between -- evaluate the condition where the guest does. */
     POP32(esp, edi);
     POP32(esp, esi);
     MEM8(0x90DF87) = 1;
@@ -35067,7 +35066,7 @@ loc_00142920: ;
 
 loc_001429A1: ;
     _fpu_cmp = (fp_top() < (double)MEMF(0x1ED74C)) ? -1 : (fp_top() > (double)MEMF(0x1ED74C)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x1ed74c] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_001429B6; /* jp: parity */
 
 loc_001429AE: ;
@@ -35148,7 +35147,7 @@ loc_00142A58: ;
     MEMF(ebx + -16) = (float)fp_top(); fp_popp(); /* fstp */
     fp_push(MEMF(esp + 0xC)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x207690)) ? -1 : (fp_top() > (double)MEMF(0x207690)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x207690] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_Z(HI8(eax), 0x41)) goto loc_00142AB3; /* je: equal / zero */
 
 loc_00142AAB: ;
@@ -35161,7 +35160,7 @@ loc_00142AB3: ;
     MEMF(ebx + -4) = (float)fp_top(); fp_popp(); /* fstp */
     fp_push(MEMF(esp + 0xC)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x207690)) ? -1 : (fp_top() > (double)MEMF(0x207690)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x207690] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_Z(HI8(eax), 0x41)) goto loc_00142ADE; /* je: equal / zero */
 
 loc_00142AD6: ;
@@ -35385,7 +35384,7 @@ loc_00142D2D: ;
     MEMF(ebx + -16) = (float)fp_top(); fp_popp(); /* fstp */
     fp_push(MEMF(esp + 0xC)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x207690)) ? -1 : (fp_top() > (double)MEMF(0x207690)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x207690] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_Z(HI8(eax), 0x41)) goto loc_00142D88; /* je: equal / zero */
 
 loc_00142D80: ;
@@ -35398,7 +35397,7 @@ loc_00142D88: ;
     MEMF(ebx + -4) = (float)fp_top(); fp_popp(); /* fstp */
     fp_push(MEMF(esp + 0xC)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x207690)) ? -1 : (fp_top() > (double)MEMF(0x207690)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x207690] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_Z(HI8(eax), 0x41)) goto loc_00142DB2; /* je: equal / zero */
 
 loc_00142DAA: ;
@@ -57709,9 +57708,9 @@ void sub_0014E01A(void)
 loc_0014E01A: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90EC4C)) ? -1 : (fp_top() > (double)MEMF(0x90EC4C)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ec4c] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     /* test HI8(eax), 0x44 - flags set for next jcc */
-    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: the guest sets these flags at 0014E024 and the branch at 0014E02C reads them; eax is overwritten in between, so the condition is evaluated here, where x86 evaluates it. */
+    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: flags evaluated where x86 evaluates them */
     eax = MEM32(0x90ED70);
     if (_rcc) goto loc_0014E052; /* jp: parity */
 
@@ -57758,9 +57757,9 @@ loc_0014E07B: ;
 loc_0014E092: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90EC64)) ? -1 : (fp_top() > (double)MEMF(0x90EC64)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ec64] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     /* test HI8(eax), 0x44 - flags set for next jcc */
-    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: the guest sets these flags at 0014E09C and the branch at 0014E0A4 reads them; eax is overwritten in between, so the condition is evaluated here, where x86 evaluates it. */
+    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: flags evaluated where x86 evaluates them */
     eax = MEM32(0x90ED70);
     if (_rcc) goto loc_0014E0CA; /* jp: parity */
 
@@ -57808,20 +57807,20 @@ loc_0014E10A: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90EC34)) ? -1 : (fp_top() > (double)MEMF(0x90EC34)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ec34] */
     fp_push(MEMF(0x90EC4C)); /* fld float */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E12A; /* jp: parity */
 
 loc_0014E11F: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < fp_st1()) ? -1 : (fp_top() > fp_st1()) ? 1 : 0; fp_popp(); /* fcomp st(1) */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((!X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E169; /* jnp: not parity */
 
 loc_0014E12A: ;
     fp_push(MEMF(0x90EC34)); /* fld float */
     MEMF(ebp + -4) = (float)fp_top(); /* fst */
     _fpu_cmp = (fp_top() < fp_st1()) ? -1 : (fp_top() > fp_st1()) ? 1 : 0; fp_popp(); /* fcomp st(1) */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_0014E141; /* jp: parity */
 
 loc_0014E13C: ;
@@ -57844,19 +57843,19 @@ loc_0014E157: ;
     fp_push(1.0); /* fld1 */
     POP32(esp, ecx);
     _fpu_cmp = (fp_top() < fp_st1()) ? -1 : (fp_top() > fp_st1()) ? 1 : 0; fp_popp(); /* fcomp st(1) */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E178; /* jp: parity */
 
 loc_0014E169: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90EC64)) ? -1 : (fp_top() > (double)MEMF(0x90EC64)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ec64] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((!X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E1A7; /* jnp: not parity */
 
 loc_0014E178: ;
     MEMF(ebp + -4) = (float)fp_top(); /* fst */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90EC64)) ? -1 : (fp_top() > (double)MEMF(0x90EC64)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ec64] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_0014E190; /* jp: parity */
 
 loc_0014E188: ;
@@ -57917,19 +57916,19 @@ loc_0014E21E: ;
     fp_push(1.0); /* fld1 */
     POP32(esp, ecx);
     _fpu_cmp = (fp_top() < fp_st1()) ? -1 : (fp_top() > fp_st1()) ? 1 : 0; fp_popp(); /* fcomp st(1) */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E23F; /* jp: parity */
 
 loc_0014E230: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x3A5994)) ? -1 : (fp_top() > (double)MEMF(0x3A5994)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x3a5994] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((!X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E270; /* jnp: not parity */
 
 loc_0014E23F: ;
     MEMF(ebp + -4) = (float)fp_top(); /* fst */
     _fpu_cmp = (fp_top() < (double)MEMF(0x3A5994)) ? -1 : (fp_top() > (double)MEMF(0x3A5994)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x3a5994] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_0014E257; /* jp: parity */
 
 loc_0014E24F: ;
@@ -57953,9 +57952,9 @@ loc_0014E270: ;
 loc_0014E272: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90EC94)) ? -1 : (fp_top() > (double)MEMF(0x90EC94)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ec94] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     /* test HI8(eax), 0x44 - flags set for next jcc */
-    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: the guest sets these flags at 0014E27C and the branch at 0014E284 reads them; eax is overwritten in between, so the condition is evaluated here, where x86 evaluates it. */
+    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: flags evaluated where x86 evaluates them */
     eax = MEM32(0x90ED70);
     if (_rcc) goto loc_0014E2A3; /* jp: parity */
 
@@ -57989,9 +57988,9 @@ loc_0014E2B8: ;
 loc_0014E2D2: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90ECAC)) ? -1 : (fp_top() > (double)MEMF(0x90ECAC)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ecac] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     /* test HI8(eax), 0x44 - flags set for next jcc */
-    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: the guest sets these flags at 0014E2DC and the branch at 0014E2E4 reads them; eax is overwritten in between, so the condition is evaluated here, where x86 evaluates it. */
+    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: flags evaluated where x86 evaluates them */
     eax = MEM32(0x90ED70);
     if (_rcc) goto loc_0014E303; /* jp: parity */
 
@@ -58056,13 +58055,13 @@ loc_0014E397: ;
     _fpu_cmp = (fp_top() < (double)MEMF(0x3A59A4)) ? -1 : (fp_top() > (double)MEMF(0x3A59A4)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x3a59a4] */
     POP32(esp, ecx);
     fp_push(MEMF(0x3A59B4)); /* fld float */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E3B8; /* jp: parity */
 
 loc_0014E3AD: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < fp_st1()) ? -1 : (fp_top() > fp_st1()) ? 1 : 0; fp_popp(); /* fcomp st(1) */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((!X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E3EF; /* jnp: not parity */
 
 loc_0014E3B8: ;
@@ -58070,7 +58069,7 @@ loc_0014E3B8: ;
     eax = MEM32(0x3A59A4);
     _fpu_cmp = (fp_top() < fp_st1()) ? -1 : (fp_top() > fp_st1()) ? 1 : 0; fp_popp(); /* fcomp st(1) */
     MEM32(ebp + -4) = eax;
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_0014E3D4; /* jp: parity */
 
 loc_0014E3CF: ;
@@ -58098,19 +58097,19 @@ loc_0014E3F1: ;
     fp_push(MEMF(0x90EC94)); /* fld float */
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < fp_st1()) ? -1 : (fp_top() > fp_st1()) ? 1 : 0; fp_popp(); /* fcomp st(1) */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E411; /* jp: parity */
 
 loc_0014E402: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x3A5994)) ? -1 : (fp_top() > (double)MEMF(0x3A5994)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x3a5994] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((!X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E447; /* jnp: not parity */
 
 loc_0014E411: ;
     MEMF(ebp + -4) = (float)fp_top(); /* fst */
     _fpu_cmp = (fp_top() < (double)MEMF(0x3A5994)) ? -1 : (fp_top() > (double)MEMF(0x3A5994)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x3a5994] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_0014E429; /* jp: parity */
 
 loc_0014E421: ;
@@ -58132,19 +58131,19 @@ loc_0014E440: ;
 loc_0014E447: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < fp_st1()) ? -1 : (fp_top() > fp_st1()) ? 1 : 0; fp_popp(); /* fcomp st(1) */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E461; /* jp: parity */
 
 loc_0014E452: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90ECAC)) ? -1 : (fp_top() > (double)MEMF(0x90ECAC)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ecac] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((!X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E4A2; /* jnp: not parity */
 
 loc_0014E461: ;
     MEMF(ebp + -4) = (float)fp_top(); /* fst */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90ECAC)) ? -1 : (fp_top() > (double)MEMF(0x90ECAC)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ecac] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_0014E479; /* jp: parity */
 
 loc_0014E471: ;
@@ -58163,7 +58162,7 @@ loc_0014E490: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90ECAC)) ? -1 : (fp_top() > (double)MEMF(0x90ECAC)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ecac] */
     POP32(esp, ecx);
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E4B3; /* jp: parity */
 
 loc_0014E4A0: ;
@@ -58175,14 +58174,14 @@ loc_0014E4A2: ;
 loc_0014E4A4: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x3A59A4)) ? -1 : (fp_top() > (double)MEMF(0x3A59A4)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x3a59a4] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((!X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E4E9; /* jnp: not parity */
 
 loc_0014E4B3: ;
     fp_push(MEMF(0x90ECAC)); /* fld float */
     fp_push(MEMF(0x90ECAC)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x3A59A4)) ? -1 : (fp_top() > (double)MEMF(0x3A59A4)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x3a59a4] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (5)))) goto loc_0014E4D4; /* jp: parity */
 
 loc_0014E4CC: ;
@@ -58400,9 +58399,9 @@ loc_0014E583: ;
     POP32(esp, edi);
     _fpu_cmp = (fp_top() < (double)MEMF(0x90EC34)) ? -1 : (fp_top() > (double)MEMF(0x90EC34)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ec34] */
     POP32(esp, esi);
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     /* test HI8(eax), 0x44 - flags set for next jcc */
-    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: the guest sets these flags at 0014E58F and the branch at 0014E597 reads them; eax is overwritten in between, so the condition is evaluated here, where x86 evaluates it. */
+    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: flags evaluated where x86 evaluates them */
     eax = MEM32(0x90ED70);
     if (_rcc) goto loc_0014E5D6; /* jp: parity */
 
@@ -58462,9 +58461,9 @@ loc_0014E61F: ;
 loc_0014E639: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90EC4C)) ? -1 : (fp_top() > (double)MEMF(0x90EC4C)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ec4c] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     /* test HI8(eax), 0x44 - flags set for next jcc */
-    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: the guest sets these flags at 0014E643 and the branch at 0014E64B reads them; eax is overwritten in between, so the condition is evaluated here, where x86 evaluates it. */
+    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: flags evaluated where x86 evaluates them */
     eax = MEM32(0x90ED70);
     if (_rcc) goto loc_0014E68A; /* jp: parity */
 
@@ -58524,9 +58523,9 @@ loc_0014E6D3: ;
 loc_0014E6ED: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90EC64)) ? -1 : (fp_top() > (double)MEMF(0x90EC64)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ec64] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     /* test HI8(eax), 0x44 - flags set for next jcc */
-    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: the guest sets these flags at 0014E6F7 and the branch at 0014E6FF reads them; eax is overwritten in between, so the condition is evaluated here, where x86 evaluates it. */
+    _rcc = ((X86_PF8((HI8(eax)) & (0x44))));  /* DOA3 bug #14: flags evaluated where x86 evaluates them */
     eax = MEM32(0x90ED70);
     if (_rcc) goto loc_0014E73E; /* jp: parity */
 
@@ -58586,7 +58585,7 @@ loc_0014E787: ;
 loc_0014E7A1: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x3A5994)) ? -1 : (fp_top() > (double)MEMF(0x3A5994)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x3a5994] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E7F0; /* jp: parity */
 
 loc_0014E7B0: ;
@@ -58612,7 +58611,7 @@ loc_0014E7E0: ;
 loc_0014E7F0: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x3A5984)) ? -1 : (fp_top() > (double)MEMF(0x3A5984)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x3a5984] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E82F; /* jp: parity */
 
 loc_0014E7FF: ;
@@ -58633,7 +58632,7 @@ loc_0014E81F: ;
 loc_0014E82F: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90EC94)) ? -1 : (fp_top() > (double)MEMF(0x90EC94)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ec94] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E88E; /* jp: parity */
 
 loc_0014E83E: ;
@@ -58664,7 +58663,7 @@ loc_0014E87E: ;
 loc_0014E88E: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90ECAC)) ? -1 : (fp_top() > (double)MEMF(0x90ECAC)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ecac] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E8ED; /* jp: parity */
 
 loc_0014E89D: ;
@@ -58695,7 +58694,7 @@ loc_0014E8DD: ;
 loc_0014E8ED: ;
     fp_push(1.0); /* fld1 */
     _fpu_cmp = (fp_top() < (double)MEMF(0x90ECC4)) ? -1 : (fp_top() > (double)MEMF(0x90ECC4)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x90ecc4] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (0x44)))) goto loc_0014E92C; /* jp: parity */
 
 loc_0014E8FC: ;
@@ -83133,6 +83132,7 @@ loc_00158D50: ;
  */
 void sub_00158D60(void)
 {
+    int _rccf = 0; /* DOA3: deferred condition evaluated at the compare */
     int _flags = 0; /* fallback flag var */
 
 loc_00158D60: ;
@@ -83301,7 +83301,7 @@ loc_00158EB6: ;
     fp_top() = fp_top() * (double)MEMF(ebp + -64); /* fmul mem */
     fp_push(MEMF(0x1ED554)); /* fld float */
     _fpu_cmp = (fp_top() < fp_st1()) ? -1 : (fp_top() > fp_st1()) ? 1 : 0; fp_popp(); /* fcomp st(1) */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((!X86_PF8((HI8(eax)) & (0x44)))) goto loc_00158ED3; /* jnp: not parity */
 
 loc_00158ECE: ;
@@ -83606,7 +83606,7 @@ loc_00159101: ;
     fp_push(MEMF(ebx + eax * 4 + -8)); /* fld float */
     eax = ebx + eax * 4 + -20;
     _fpu_cmp = (fp_top() < (double)MEMF(eax + 0x20)) ? -1 : (fp_top() > (double)MEMF(eax + 0x20)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [eax + 0x20] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_NZ(HI8(eax), 0x41)) goto loc_00159117; /* jne: not equal / not zero */
 
 loc_00159116: ;
@@ -83617,7 +83617,7 @@ loc_00159117: ;
     eax = edx + edx * 4;
     _fpu_cmp = (fp_top() < (double)MEMF(ebx + eax * 4 + -8)) ? -1 : (fp_top() > (double)MEMF(ebx + eax * 4 + -8)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [ebx + eax*4 - 8] */
     esi = ebx + eax * 4 + -20;
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_NZ(HI8(eax), 0x41)) goto loc_00159140; /* jne: not equal / not zero */
 
 loc_0015912C: ;
@@ -83721,14 +83721,12 @@ loc_001591C5: ;
     /* nop */
 
 loc_001591D0: ;
-
     ebx = MEM32(eax + 0x10);
     ecx = ebx + 0x80;
     MEM32(ebp + 8) = ecx;
     /* nop */
 
 loc_001591E0: ;
-
     eax = MEM32(ebx);
     eax = eax - 0;
     if ((eax == 0)) goto loc_001592DD; /* je: equal / zero */
@@ -83803,7 +83801,7 @@ loc_0015927D: ;
     fp_top() = fp_top() * (double)MEMF(ebp + -68); /* fmul mem */
     fp_push(MEMF(0x1ED554)); /* fld float */
     _fpu_cmp = (fp_top() < fp_st1()) ? -1 : (fp_top() > fp_st1()) ? 1 : 0; fp_popp(); /* fcomp st(1) */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((!X86_PF8((HI8(eax)) & (0x44)))) goto loc_0015929A; /* jnp: not parity */
 
 loc_00159295: ;
@@ -83974,7 +83972,6 @@ loc_001593D8: ;
 
 loc_001593E4: ;
     eax = MEM32(ebp + -8);
-
     ecx = MEM32(0x99A1F8);
     eax = eax + 0x14;
     /* cmp eax, ecx - flags set for next jcc */
@@ -86680,7 +86677,7 @@ loc_0015A25F: ;
 loc_0015A273: ;
     fp_push(MEMF(0x480964)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(0x1FF864)) ? -1 : (fp_top() > (double)MEMF(0x1FF864)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [0x1ff864] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if (TEST_NZ(HI8(eax), 1)) goto loc_0015A291; /* jne: not equal / not zero */
 
 loc_0015A286: ;
@@ -86816,7 +86813,6 @@ loc_0015A3F2: ;
     #undef fp_top
     #undef fp_st1
     g_seh_ebp = ebp; sub_00159EFF(); return; /* DOA3: restored dropped fall-through to sub_00159EFF */
-
 }
 
 /**

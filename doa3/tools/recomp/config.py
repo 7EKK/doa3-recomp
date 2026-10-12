@@ -42,6 +42,11 @@ ENTRY_POINT = 0x001651A5
 # CRT _ftol2 (float -> int64 in edx:eax, truncating).
 FTOL2_ADDR = 0x0018DB30
 
+# D3D masks guest physical addresses to 26 bits (64 MB). The port's low heap
+# is 80 MB, so those masks are widened to 27 bits.
+PHYS_MASK_REWRITE = {0x03FFFFFF: 0x07FFFFFF}
+PHYS_MASK_RANGE = (0x001B0DE0, 0x001C35C0)   # D3D section
+
 # Dropped fall-throughs are restored in the game .text and D3DX; in the rest
 # of the XDK only at the sites proven to need it (restoring them all broke
 # boot; 0x1C883B in DSOUND recursed). History: NOTES.md "Dropped fall-throughs".
@@ -315,6 +320,242 @@ LEGACY_NO_JT_EXTEND_FUNCS = {
     0x0010BAA0, 0x0012B6C0, 0x001B9C46, 0x001B9DB9, 0x001B9DC3,
 }
 
+# Where the tree's fall-throughs differ from the rule (fix_fallthrough):
+# extra ones it restored (function -> (target, g_seh_ebp sync)), ones it
+# never restored, and ones whose g_seh_ebp sync differs from the rule's.
+FALLTHROUGH_EXTRA = {
+    0x001B3D11: (0x001B3D15, False),
+    0x0003B9F5: (0x0003BAD6, True),
+    0x0003DAE0: (0x0003DBC6, True),
+    0x0004D580: (0x0004D723, True),
+    0x000977A0: (0x000977ED, True),
+    0x00097AD9: (0x00097C65, True),
+    0x00097B1C: (0x00097C65, True),
+    0x000E002A: (0x000E0050, True),
+    0x000E003D: (0x000E0050, True),
+    0x000EA720: (0x000EA7B7, True),
+    0x000EAC65: (0x000EB000, True),
+    0x0013A7E7: (0x0013A816, True),
+    0x00159EAD: (0x00159EFF, True),
+    0x00179440: (0x0017947B, True),
+    0x00187680: (0x001876F1, True),
+    0x0018A95E: (0x0018AA83, True),
+    0x0018AB20: (0x0018AB92, True),
+    0x001C677D: (0x001C67A4, True),
+    0x001C8FFE: (0x001C9003, False),
+}
+FALLTHROUGH_SKIP = {
+    0x00031EF0, 0x0005998B, 0x0007E917, 0x00097D1A, 0x000DE8DD, 0x000DFF50,
+    0x00177706, 0x001777B0, 0x001809FE, 0x001876F1, 0x00187739, 0x001878C7,
+    0x00187D0D, 0x00187FF5, 0x001894FA, 0x0018C611, 0x0018CCA5, 0x0018CDC1,
+}
+# Fall-throughs into a lone `ret N` the detector never made a function:
+# function -> bytes the ret pops (return address included).
+FALLTHROUGH_RET = {0x001C986E: 8, 0x001CC04F: 8}
+FALLTHROUGH_SYNC = {
+    0x00092EF4: True,
+    0x00157276: True,
+    0x00041D84: False,
+    0x000F24F7: False,
+    0x0018EDD8: False,
+}
+
+# ebp is callee-saved; between generated functions it travels in g_seh_ebp,
+# which a callee may leave pointing at its own frame (fix_carrier):
+#   HOLD      - keep g_seh_ebp across every call in the function
+#   INHERIT   - take ebp from g_seh_ebp at entry, so the hand-off syncs it back
+#   PROLOGUE  - a split prologue pushes the caller's frame, not a stale local
+#   EPILOGUE  - a split epilogue hands the frame it pops back at ret
+CARRIER_HOLD_FUNCS = {0x0018DF33, 0x001C841E, 0x001C8D1D, 0x001C8FFE}
+CARRIER_INHERIT_FUNCS = {0x00092EF4, 0x001200C1, 0x00157276}
+CARRIER_SPLIT_PROLOGUE = {0x001CCC2D}
+CARRIER_SPLIT_EPILOGUE = {0x001CCC88}
+
+# cmpxchg sites the tree still lifts as a bare compare (no store, no reload).
+CMPXCHG_UNFIXED = {0x001C86F7, 0x001CB1FB}
+
+# Functions whose tail jump to _ftol2 is inlined like its calls.
+FTOL2_TAIL_INLINE_FUNCS = {0x000450D1, 0x001809FE}
+
+# Shared conditional jumps the tree never folded (fix_shared_jcc):
+# (function, label of the shared jump).
+SHARED_JCC_UNFIXED = {
+    (0x000140D0, 0x0001433F),
+    (0x00014190, 0x0001433F),
+    (0x00016470, 0x000166E3),
+    (0x00016470, 0x0001708E),
+    (0x00017010, 0x0001708E),
+    (0x00017030, 0x0001708E),
+    (0x0001B270, 0x0001B2CD),
+    (0x0001B720, 0x0001B7BC),
+    (0x0001B7D0, 0x0001B83E),
+    (0x0001F590, 0x0001F9DB),
+    (0x0001F863, 0x0001F9DB),
+    (0x000201F6, 0x00020951),
+    (0x0002030F, 0x00020951),
+    (0x000208D9, 0x00020951),
+    (0x000208FB, 0x00020951),
+    (0x00020DE5, 0x000210B9),
+    (0x000289A0, 0x000293CD),
+    (0x000289A0, 0x000293DC),
+    (0x000289A0, 0x000293EB),
+    (0x000289A0, 0x0002940D),
+    (0x000289A0, 0x0002941B),
+    (0x000289A0, 0x00029429),
+    (0x00028FAC, 0x000293CD),
+    (0x00028FAC, 0x000293DC),
+    (0x00028FAC, 0x000293EB),
+    (0x00028FAC, 0x0002940D),
+    (0x00028FAC, 0x0002941B),
+    (0x00028FAC, 0x00029429),
+    (0x00028FF8, 0x000293CD),
+    (0x00028FF8, 0x000293DC),
+    (0x00028FF8, 0x000293EB),
+    (0x00028FF8, 0x0002940D),
+    (0x00028FF8, 0x0002941B),
+    (0x00028FF8, 0x00029429),
+    (0x0003166D, 0x00031E2C),
+    (0x00031BA0, 0x00031E2C),
+    (0x00031C09, 0x00031E2C),
+    (0x00046FCE, 0x000470E8),
+    (0x000476C0, 0x00047792),
+    (0x000476F0, 0x00047792),
+    (0x00047778, 0x00047792),
+    (0x000558DC, 0x00055980),
+    (0x00068040, 0x000680F5),
+    (0x00070A60, 0x00070A9C),
+    (0x00075890, 0x00075CB4),
+    (0x00075E00, 0x00075F93),
+    (0x00077FF0, 0x0007812C),
+    (0x00077FF0, 0x00078531),
+    (0x00077FF0, 0x000786AB),
+    (0x000796CE, 0x00079A7E),
+    (0x00079A60, 0x00079A7E),
+    (0x00079C6F, 0x00079C8C),
+    (0x00079C71, 0x00079C8C),
+    (0x0007EE70, 0x0007EEAA),
+    (0x0007EEE0, 0x0007EF1F),
+    (0x0007F1A0, 0x0007F1EA),
+    (0x0008169B, 0x00081721),
+    (0x000A40E0, 0x000A41DB),
+    (0x000A9AC0, 0x000A9D3B),
+    (0x000B0FDF, 0x000B1232),
+    (0x000B0FDF, 0x000B1290),
+    (0x000B0FDF, 0x000B1296),
+    (0x000B0FDF, 0x000B15CB),
+    (0x000C3380, 0x000C3501),
+    (0x000D1300, 0x000D1483),
+    (0x000D1446, 0x000D1483),
+    (0x000E9DF0, 0x000E9EE3),
+    (0x000EA6E2, 0x000EA7B7),
+    (0x000EA6E2, 0x000EABBD),
+    (0x000EA720, 0x000EA7B7),
+    (0x000EA720, 0x000EABBD),
+    (0x000EA7DD, 0x000EABBD),
+    (0x000EAC30, 0x000EB042),
+    (0x000EAC65, 0x000EB042),
+    (0x000EB280, 0x000EB3E0),
+    (0x00150683, 0x00150880),
+    (0x00150683, 0x001508F3),
+    (0x0015A4F0, 0x0015A52D),
+    (0x0015A570, 0x0015A8BC),
+    (0x0015AC54, 0x0015ACD0),
+    (0x00162360, 0x001625F6),
+    (0x0016EC00, 0x0016ECF3),
+    (0x001929A4, 0x001934DE),
+}
+# The same, where the path's flags come from an arithmetic result.
+SHARED_JCC_ARITH_UNFIXED = {
+    (0x0002C0C0, 0x0002C1B8),
+    (0x0002C0C0, 0x0002C1DA),
+    (0x0002C0C0, 0x0002C260),
+    (0x0002C0C0, 0x0002C282),
+    (0x00045250, 0x0004554A),
+    (0x000476C0, 0x00047794),
+    (0x000476F0, 0x00047794),
+    (0x00055B49, 0x00055C75),
+    (0x00073DA0, 0x00073E60),
+    (0x000879A0, 0x00087A84),
+    (0x000A4876, 0x000A499E),
+    (0x000A496B, 0x000A499E),
+    (0x000ADCD0, 0x000ADDE3),
+    (0x000E3180, 0x000E34A0),
+    (0x000E3392, 0x000E34A0),
+    (0x000E62D0, 0x000E65F0),
+    (0x000E64E2, 0x000E65F0),
+    (0x00158DE0, 0x00158FC5),
+    (0x0015EBF0, 0x0015EC45),
+    (0x0016AE80, 0x0016AEF3),
+    (0x0016BB00, 0x0016BB7D),
+    (0x0016C1F0, 0x0016C295),
+    (0x0016C7E0, 0x0016C876),
+    (0x0016D330, 0x0016D3D9),
+    (0x0016DB80, 0x0016DC0B),
+    (0x00170AB0, 0x00170B26),
+    (0x001773F0, 0x001774A0),
+    (0x00180C18, 0x00180CBB),
+    (0x00180C18, 0x00180CF5),
+    (0x0018172B, 0x001819D7),
+    (0x0018172B, 0x00181BF2),
+    (0x00181BE8, 0x00181BF2),
+    (0x0019199C, 0x001919E3),
+    (0x001929A4, 0x00192E7F),
+    (0x00195DFA, 0x00195EFD),
+    (0x00195DFA, 0x00195F6C),
+    (0x00195DFA, 0x00195FCB),
+    (0x00195DFD, 0x00195EFD),
+    (0x00195DFD, 0x00195F6C),
+    (0x00195DFD, 0x00195FCB),
+    (0x00195EA3, 0x00195EFD),
+    (0x00195ECE, 0x00195EFD),
+    (0x00195F2E, 0x00195F6C),
+    (0x00195F2E, 0x00195FCB),
+    (0x00195F8C, 0x00195FCB),
+    (0x001BC2CF, 0x001BC361),
+    (0x001E4E80, 0x001E4F2D),
+    (0x001E4ED2, 0x001E4F2D),
+    (0x001E5E96, 0x001E5F59),
+    (0x001E5E96, 0x001E5FB0),
+    (0x001E5E96, 0x001E6007),
+    (0x001E5E96, 0x001E605E),
+}
+
+# Fragments that read their caller's flags (fix_entry_flags) which the tree
+# never fixed: their branches stay `if (_flags)`.
+ENTRY_FLAGS_UNFIXED = {
+    0x0001145D, 0x0003EB76, 0x0006798E, 0x0006C18E, 0x0006C862, 0x000A4474,
+    0x000A6FD5, 0x000B196A, 0x001579A2, 0x0016463D, 0x001777B0, 0x0017A08D,
+    0x0018E9F5, 0x0018ED7D, 0x0018F1E5, 0x001B9CA2,
+}
+
+# Deferred compares the tree never rewrote (fix_deferred_cmp): (function,
+# compare comment, occurrence in the function).
+DEFERRED_CMP_UNFIXED = {
+    (0x0004BBB0, "cmp MEM32(ebp + 0x28), edi", 0),
+    (0x0004C040, "cmp MEM32(ebp + 0x28), edi", 0),
+}
+
+# Flag setters whose operand is overwritten before the consumer that reads
+# their flags, which the tree never latched (fix_clobbered_flags): (function,
+# compare comment or arithmetic statement, occurrence in the function).
+CLOBBERED_FLAGS_UNFIXED = {
+    (0x000808F0, "test LO8(ecx), LO8(ecx)", 0),
+    (0x00080980, "test LO8(ecx), LO8(ecx)", 0),
+    (0x001060B0, "test HI8(eax), 0x44", 0),
+    (0x00123330, "cmp eax, ebx", 0),
+    (0x001372C0, "test LO8(ecx), HI8(eax)", 0),
+    (0x0014DF91, "test HI8(eax), 0x44", 0),
+    (0x0004BBB0, "cmp MEM32(ebp + 0x28), edi", 0),
+    (0x0004C040, "cmp MEM32(ebp + 0x28), edi", 0),
+    (0x000297D0, "eax--", 0),
+    (0x0007C1A0, "test LO8(edx), LO8(edx)", 0),
+    (0x0011F7A0, "eax--", 0),
+    (0x0017FBD0, "eax = eax ^ MEM32(esp + 8)", 0),
+    (0x001809E0, "eax = eax ^ MEM32(esp + 8)", 0),
+    (0x0018F460, "ecx = ecx | eax", 0),
+    (0x001CB252, "edx--", 0),
+    (0x001CE9C5, "eax--", 4),
+}
 
 # How the generated tree names bodies that recomp_manual.c replaces or wraps
 # (address -> name suffix), and the overridden bodies it keeps under #if 0.

@@ -2582,7 +2582,7 @@ loc_001BAD1B: ;
     edi = MEM32(edi + 0x40186C);
     { uint32_t _icall_esp = g_esp;
     PUSH32(esp, edi);
-    { uint32_t _icall_t = MEM32(esp + 0x24); PUSH32(esp, 0); RECOMP_ICALL_SAFE(_icall_t, _icall_esp); } /* indirect call (DOA3: esp-rel target read pre-push) */
+    { uint32_t _icall_t = MEM32(esp + 0x24); PUSH32(esp, 0); RECOMP_ICALL_SAFE(_icall_t, _icall_esp); } /* indirect call */
     }
 
 loc_001BAD26: ;
@@ -4093,7 +4093,7 @@ loc_001BB547: ;
  */
 void sub_001BB561(void)
 {
-    int _rcc = 0; /* DOA3 bug #14: condition evaluated at the compare */
+    int _rcc = 0; /* DOA3: deferred condition evaluated at the compare */
     uint32_t ebp;
     int _flags = 0; /* fallback flag var */
     ebp = g_seh_ebp; /* fpo_leaf: inherit caller's frame */
@@ -4102,7 +4102,7 @@ loc_001BB561: ;
     ecx = eax;
     ecx = ecx & 0xF0000000u;
     /* cmp ecx, 0x80000000u - flags set for next jcc */
-    _rcc = (CMP_EQ(ecx, 0x80000000u));  /* DOA3 bug #14: the guest sets these flags at 001BB569 and the branch at 001BB572 reads them; ecx is overwritten in between, so the condition is evaluated here, where x86 evaluates it. */
+    _rcc = (CMP_EQ(ecx, 0x80000000u));  /* DOA3: x86 latched these flags at the compare above and the branch below reads them, but an operand is overwritten in between -- evaluate the condition where the guest does. */
     ecx = MEM32(ebp + 0xC);
     if (_rcc) goto loc_001BB581; /* je: equal / zero */
 
@@ -4113,7 +4113,7 @@ loc_001BB574: ;
     g_seh_ebp = ebp; sub_001BB591(); return; /* tail jmp 0x001BB591 */
 
 loc_001BB581: ;
-    eax = eax & 0x7FFFFFF; /* DOA3: 27-bit physical mask, guest RAM is 80 MB in the port (was 0x3FFFFFF) */
+    eax = eax & 0x7FFFFFF;
     MEM32(ecx) = eax;
     eax = MEM32(ebp + 0x10);
     MEM32(eax) = 1;
@@ -15696,7 +15696,6 @@ loc_001C436E: ;
     SET_LO8(eax, LO8(eax) - 0 - _cf); /* sbb */
 
     g_seh_ebp = ebp; sub_001C43C3(); return; /* DOA3: restored dropped fall-through to sub_001C43C3 */
-
 }
 
 /**
@@ -15849,6 +15848,7 @@ loc_001C64D1: ;
  */
 void sub_001C64DB(void)
 {
+    int _rccf = 0; /* DOA3: deferred condition evaluated at the compare */
     uint32_t ebp;
     int _flags = 0; /* fallback flag var */
 
@@ -22281,6 +22281,7 @@ loc_001C82F8: ;
  */
 void sub_001C8317(void)
 {
+    int _rccf = 0; /* DOA3: deferred condition evaluated at the compare */
     uint32_t ebp;
     int _flags = 0; /* fallback flag var */
 
@@ -22659,9 +22660,7 @@ loc_001C8478: ;
     eax = MEM32(ecx);
 
 loc_001C8492: ;
-    /* cmpxchg dword ptr [ecx], edx: equal -> store edx, ZF=1; else eax = [ecx], ZF=0.
-     * DOA3: was a compare with no store, so the ISR status word at mgr+0x5EC was
-     * never cleared and the completion loop at 0x1C8D05 would re-read it forever. */
+    /* cmpxchg dword ptr [ecx], edx: equal -> store edx, ZF=1; else eax = MEM32(ecx), ZF=0. */
     if (MEM32(ecx) == eax) { MEM32(ecx) = edx; }
     else { eax = MEM32(ecx); goto loc_001C8492; } /* jne */
 
@@ -24003,7 +24002,7 @@ loc_001C8D1D: ;
 
 loc_001C8D26: ;
     ecx = esi;
-    { uint32_t _seh_hold = g_seh_ebp; /* DOA3: ebp survives a call; keep the carrier across it (the callee leaves its own frame there) */
+    { uint32_t _seh_hold = g_seh_ebp; /* DOA3: ebp survives the call */
     PUSH32(esp, 0); sub_001C84A4(); /* call 0x001C84A4 */
     g_seh_ebp = _seh_hold; }
 
@@ -24012,7 +24011,7 @@ loc_001C8D2D: ;
 
 loc_001C8D36: ;
     ecx = esi;
-    { uint32_t _seh_hold = g_seh_ebp; /* DOA3: ebp survives a call; keep the carrier across it (the callee leaves its own frame there) */
+    { uint32_t _seh_hold = g_seh_ebp; /* DOA3: ebp survives the call */
     PUSH32(esp, 0); sub_001C83EC(); /* call 0x001C83EC */
     g_seh_ebp = _seh_hold; }
 
@@ -24621,7 +24620,7 @@ void sub_001C8FFE(void)
 {
 
 loc_001C8FFE: ;
-    { uint32_t _seh_hold = g_seh_ebp; /* DOA3: ebp survives a call; keep the carrier across it (the callee leaves its own frame there) */
+    { uint32_t _seh_hold = g_seh_ebp; /* DOA3: ebp survives the call */
     PUSH32(esp, 0); sub_001C8EF0(); /* call 0x001C8EF0 */
     g_seh_ebp = _seh_hold; }
 
@@ -26263,6 +26262,7 @@ loc_001C984C: ;
  */
 void sub_001C984F_gen(void)
 {
+    int _rccf = 0; /* DOA3: deferred condition evaluated at the compare */
     uint32_t ebp;
     int _flags = 0; /* fallback flag var */
     ebp = g_seh_ebp; /* fpo_leaf: inherit caller's frame */
@@ -26294,7 +26294,8 @@ void sub_001C986E(void)
 
 loc_001C986E: ;
     eax = (uint32_t)((int32_t)eax * (int32_t)MEM32(esp + 4));
-    esp += 8; return; /* DOA3: restored dropped fall-through into 0x001C9873 (ret 4) */
+
+    esp += 8; return; /* DOA3: fall-through into a lone ret */
 }
 
 /**
@@ -28631,6 +28632,7 @@ loc_001CA575: ;
  */
 void sub_001CA5B1(void)
 {
+    int _rccf = 0; /* DOA3: deferred condition evaluated at the compare */
     uint32_t ebp;
     int _flags = 0; /* fallback flag var */
     ebp = g_seh_ebp; /* fpo_leaf: inherit caller's frame */
@@ -30995,6 +30997,7 @@ loc_001CB52B: ;
  */
 void sub_001CB531(void)
 {
+    int _rccf = 0; /* DOA3: deferred condition evaluated at the compare */
     uint32_t ebp;
     int _flags = 0; /* fallback flag var */
     int _fpu_cmp = 0; /* FPU compare result: -1/0/1 */
@@ -31141,7 +31144,7 @@ loc_001CB5E5: ;
     eax = (uint32_t)((int32_t)eax * (int32_t)0x1F);
     esi = esi + eax;
     ecx = ZX16(MEM16(esi * 2 + 0x1E0448));
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     ecx = ecx << 5;
     POP32(esp, esi);
     /* test HI8(eax), 1 - flags set for next jcc */
@@ -32988,6 +32991,7 @@ loc_001CC02C: ;
  */
 void sub_001CC02F(void)
 {
+    int _rccf = 0; /* DOA3: deferred condition evaluated at the compare */
     uint32_t ebp;
     int _flags = 0; /* fallback flag var */
     ebp = g_seh_ebp; /* fpo_leaf: inherit caller's frame */
@@ -33024,7 +33028,8 @@ loc_001CC04F: ;
     { uint64_t _dividend = ((uint64_t)edx << 32) | eax;
       eax = (uint32_t)(_dividend / (uint32_t)ecx);
       edx = (uint32_t)(_dividend % (uint32_t)ecx); }
-    esp += 8; return; /* DOA3: restored dropped fall-through into 0x001CC051 (ret 4) */
+
+    esp += 8; return; /* DOA3: fall-through into a lone ret */
 }
 
 /**
@@ -35014,7 +35019,7 @@ void sub_001CCC2D(void)
     #define fp_st1() g_fp_stack[(g_fp_top + 1) & 7]
 
 loc_001CCC2D: ;
-    ebp = g_seh_ebp; /* DOA3: push ebp saves the caller's frame (the carrier), not an uninitialised local; sub_001CCC88's leave hands it back */
+    ebp = g_seh_ebp; /* DOA3: push saves the caller's frame */
     PUSH32(esp, ebp);
     ebp = esp;
     esp = esp - 0xC;
@@ -35024,7 +35029,7 @@ loc_001CCC2D: ;
 loc_001CCC3B: ;
     fp_push(MEMF(0x2159EC)); /* fld float */
     _fpu_cmp = (fp_top() < (double)MEMF(ebp + 8)) ? -1 : (fp_top() > (double)MEMF(ebp + 8)) ? 1 : 0; fp_popp(); /* fcomp dword ptr [ebp + 8] */
-    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax: full AX write (C0/C3 in AH, exception flags modelled clear); the AH-only lift left stale AL bits in guards that compare eax (heap sort in sub_00159010) */
+    eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */
     if ((X86_PF8((HI8(eax)) & (0x44)))) { g_seh_ebp = ebp; sub_001CCC51(); return; } /* jp: parity */
 
 loc_001CCC4B: ;
@@ -35103,7 +35108,7 @@ loc_001CCC90: ;
     eax = MEM32(ebp + 8);
     esp = ebp;
     POP32(esp, ebp); /* leave */
-    g_seh_ebp = ebp; /* DOA3: leave restores the caller's frame; the carrier kept this helper's frame, so sub_001C9B9A returned esp 28 bytes low, sub_001CAB2B popped esi = 0 and every one-shot Play failed 0x8007000E */
+    g_seh_ebp = ebp; /* DOA3: hand back the frame popped above */
     esp += 8; return; /* ret 4 */
 
 }
@@ -43436,7 +43441,7 @@ loc_001E30F0: ;
     eax = eax + ecx;
     PUSH32(esp, esi);
     MEM32(esi + 0x18) = eax;
-    { uint32_t _icall_t = MEM32(esp + 0x34); PUSH32(esp, 0); RECOMP_ICALL_SAFE(_icall_t, _icall_esp); } /* indirect call (DOA3: esp-rel target read pre-push) */
+    { uint32_t _icall_t = MEM32(esp + 0x34); PUSH32(esp, 0); RECOMP_ICALL_SAFE(_icall_t, _icall_esp); } /* indirect call */
     }
 
 loc_001E31F6: ;
@@ -43453,7 +43458,7 @@ loc_001E31F6: ;
     { uint32_t _icall_esp = g_esp;
     PUSH32(esp, esi);
     MEM32(esi + 0x18) = eax;
-    { uint32_t _icall_t = MEM32(esp + 0x38); PUSH32(esp, 0); RECOMP_ICALL_SAFE(_icall_t, _icall_esp); } /* indirect call (DOA3: esp-rel target read pre-push) */
+    { uint32_t _icall_t = MEM32(esp + 0x38); PUSH32(esp, 0); RECOMP_ICALL_SAFE(_icall_t, _icall_esp); } /* indirect call */
     }
 
 loc_001E321E: ;

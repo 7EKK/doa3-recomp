@@ -745,8 +745,8 @@ loc_0015FEFC: ;
  */
 void sub_0015FFE0(void)
 {
-    int _rccf = 0; /* DOA3: deferred condition evaluated at the compare */
-    int _rcc = 0; /* DOA3 bug #14: condition evaluated at the compare */
+    int _rccf = 0; /* latched flags */
+    int _rcc = 0; /* DOA3: deferred condition evaluated at the compare */
     uint32_t ebp;
     int _flags = 0; /* fallback flag var */
     #define fp_push(v) (g_fp_stack[--g_fp_top & 7] = (v))
@@ -781,7 +781,7 @@ loc_00160029: ;
 loc_00160035: ;
     SET_LO8(eax, MEM8(0xB1F7F1));
     /* test LO8(eax), LO8(eax) - flags set for next jcc */
-    _rcc = (TEST_NZ(LO8(eax), LO8(eax)));  /* DOA3 bug #14: the guest sets these flags at 0016003A and the branch at 00160041 reads them; eax is overwritten in between, so the condition is evaluated here, where x86 evaluates it. */
+    _rcc = (TEST_NZ(LO8(eax), LO8(eax)));  /* DOA3: x86 latched these flags at the compare above and the branch below reads them, but an operand is overwritten in between -- evaluate the condition where the guest does. */
     eax = 0x214FEC;
     if (_rcc) goto loc_00160048; /* jne: not equal / not zero */
 
@@ -9327,6 +9327,7 @@ loc_001634BE: ;
  */
 void sub_001634C4(void)
 {
+    int _rccf = 0; /* DOA3: deferred condition evaluated at the compare */
     uint32_t ebp;
     int _flags = 0; /* fallback flag var */
 
@@ -27121,6 +27122,7 @@ loc_00169B29: ;
  */
 void sub_00169AF0(void)
 {
+    int _rccf = 0; /* DOA3: deferred condition evaluated at the compare */
     uint32_t ebp;
     int _flags = 0; /* fallback flag var */
     ebp = g_seh_ebp; /* fpo_leaf: inherit caller's frame */
@@ -52184,6 +52186,7 @@ loc_0017275F: ;
  */
 void sub_00172770_gen(void)
 {
+    int _rccf = 0; /* DOA3: deferred condition evaluated at the compare */
     uint32_t ebp;
     int _flags = 0; /* fallback flag var */
     ebp = g_seh_ebp; /* fpo_leaf: inherit caller's frame */
@@ -54519,6 +54522,7 @@ loc_001735E0: ;
  */
 void sub_001735F0(void)
 {
+    int _rccf = 0; /* DOA3: deferred condition evaluated at the compare */
     uint32_t ebp;
     int _flags = 0; /* fallback flag var */
     ebp = g_seh_ebp; /* fpo_leaf: inherit caller's frame */
@@ -59064,6 +59068,7 @@ loc_00174F27: ;
  */
 void sub_00174F30(void)
 {
+    int _rccf = 0; /* DOA3: deferred condition evaluated at the compare */
     int _flags = 0; /* fallback flag var */
 
 loc_00174F30: ;

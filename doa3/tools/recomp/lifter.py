@@ -20,7 +20,8 @@ import struct
 from .disasm import Instruction, Operand
 from .config import (is_code_address, is_data_address, va_to_file_offset, KERNEL_THUNK_ADDR, FTOL2_ADDR,
                      LEGACY_ICALL_FUNCS, LEGACY_FTOL2_CALL_FUNCS, LEGACY_FNSTSW_AH_FUNCS,
-                     LEGACY_CONDTAIL_SYNC_FUNCS)
+                     LEGACY_CONDTAIL_SYNC_FUNCS, PHYS_MASK_REWRITE, PHYS_MASK_RANGE,
+                     FTOL2_TAIL_INLINE_FUNCS, CMPXCHG_UNFIXED, IF0_BODIES)
 
 
 # ── Operand formatting ──────────────────────────────────────
@@ -889,6 +890,12 @@ class Lifter:
             return self._lift_pop(insn, ops)
 
         # ── Arithmetic ──
+        if (m == "and" and nops == 2 and ops[1].type == "imm"
+                and ops[1].imm in PHYS_MASK_REWRITE
+                and PHYS_MASK_RANGE[0] <= insn.address < PHYS_MASK_RANGE[1]
+                and self.func_start not in IF0_BODIES):   # not compiled
+            import dataclasses
+            ops = [ops[0], dataclasses.replace(ops[1], imm=PHYS_MASK_REWRITE[ops[1].imm])]
         if m in ("add", "sub", "and", "or", "xor"):
             return self._lift_alu_binop(insn, ops, m)
         if m in ("inc", "dec"):
@@ -1301,7 +1308,9 @@ class Lifter:
             # For esp-relative targets (e.g. `call [esp+0xC]`), pushing first shifts esp
             # so MEM32(esp+X) would read the wrong slot (the just-pushed dummy). The
             # original x86 reads the target at the pre-push esp.
-            if self.func_start in LEGACY_ICALL_FUNCS:
+            # An esp-relative target must be read before the dummy push moves
+            # esp; older functions read the others after it.
+            if self.func_start in LEGACY_ICALL_FUNCS and "esp" not in target:
                 return [f"PUSH32(esp, 0); RECOMP_ICALL_SAFE({target}, _icall_esp); /* indirect call */"]
             return [f"{{ uint32_t _icall_t = {target}; PUSH32(esp, 0); "
                     f"RECOMP_ICALL_SAFE(_icall_t, _icall_esp); }} /* indirect call */"]
@@ -1375,6 +1384,10 @@ class Lifter:
 
     def _lift_jmp(self, insn, ops):
         if insn.jump_target:
+            if insn.jump_target == FTOL2_ADDR and self.func_start in FTOL2_TAIL_INLINE_FUNCS:
+                return ["{ int64_t _ft = (int64_t)fp_top(); fp_popp(); "
+                        "eax = (uint32_t)_ft; edx = (uint32_t)((uint64_t)_ft >> 32); } "
+                        "esp += 4; return; /* inline _ftol2 tail (bug #8) */"]
             if self._is_external_target(insn.jump_target):
                 # Tail call - no return address push (reuses current frame's)
                 # Bridge ebp so the target function can inherit our frame pointer.
@@ -1942,6 +1955,29 @@ def lift_basic_block(lifter, bb, flag_state=None):
 
     while i < len(insns):
         curr = insns[i]
+
+        # cmpxchg [m], r + jne/je: equal -> store r (ZF=1); not equal -> the
+        # accumulator takes [m] (ZF=0). The plain lift drops both effects.
+        if (curr.mnemonic == "cmpxchg" and i + 1 < len(insns)
+                and insns[i + 1].mnemonic in ("jne", "jnz", "je", "jz")
+                and insns[i + 1].jump_target is not None
+                and len(curr.operands) == 2 and curr.operands[0].type == "mem"
+                and curr.operands[0].mem_size == 4
+                and curr.address not in CMPXCHG_UNFIXED):
+            dst = _fmt_operand_read(curr.operands[0])
+            src = _fmt_operand_read(curr.operands[1])
+            tgt = f"goto loc_{insns[i + 1].jump_target:08X};"
+            if insns[i + 1].mnemonic in ("jne", "jnz"):
+                stmts.append(f"/* cmpxchg {curr.op_str}: equal -> store {src}, ZF=1; else eax = {dst}, ZF=0. */")
+                stmts.append(f"if ({dst} == eax) {{ {dst} = {src}; }}")
+                stmts.append(f"else {{ eax = {dst}; {tgt} }} /* jne */")
+            else:
+                stmts.append(f"/* cmpxchg {curr.op_str}: equal -> store {src}, ZF=1; else eax = {dst}, ZF=0. */")
+                stmts.append(f"if ({dst} == eax) {{ {dst} = {src}; {tgt} }}")
+                stmts.append(f"else {{ eax = {dst}; }} /* je */")
+            last_flag_setter, last_flag_ops = None, []
+            i += 2
+            continue
 
         # Try cmp/test + jcc pattern first (2-instruction match)
         match = try_match_cmp_jcc(insns, i, lifter=lifter)

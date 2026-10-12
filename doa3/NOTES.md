@@ -176,51 +176,18 @@ The analysis filename is retained for loader compatibility even though it
 contains DOA3 data. Use full disassembly; data sections marked executable by the
 XBE must still be excluded by section name.
 
-After regeneration:
+`src/game/recomp/gen/` is entirely pipeline output; do not edit it. Every fix
+lives in the pipeline:
 
-1. Re-run missing-function seeding until every valid in-section call target has
-   a generated definition and dispatch entry.
-2. Confirm immediate function-pointer targets, thread starts, callbacks, and
-   vtable entries are seeded; direct-call scans cannot discover all of them.
-3. Restore the six PSGSFD fall-throughs listed under Lifter Defect Reference unless the generator has
-   gained a general fix for adjacent split blocks.
-4. Confirm the `0x0017C025` deferred comparison still snapshots operands before
-   `ebp` is overwritten.
-5. Confirm generated PSGSFD code emits `mmx_pavgb`; the lifter mapping should
-   make this survive regeneration.
-6. Confirm `fnstcw`/`fldcw`/`frndint` emit the `g_x87_cw` / `x87_frndint`
-   forms (the lifter now does this) and that `sub_0018DF33` still preserves
-   `g_seh_ebp` across `sub_00191848` -- a fragment-boundary fix the lifter
-   does not yet make on its own.
-7. Re-run `py -3 -m tools.recomp.fix_deferred_cmp` (deferred compares whose
-   operands are overwritten before the branch) -- 271 sites.
-8. Re-seed the eight attract-flow function-pointer targets and re-emit
-   `recomp_seedattract.c`; confirm `recomp_dispatch.c` stays sorted and its
-   size constant covers the new entries.
-9. Build Release and run the opening movie before accepting regenerated output.
+- `tools/recomp/lifter.py` -- instruction-level lifting rules.
+- `tools/recomp/translator.py` -- per-function rules (fall-throughs, deferred
+  compares, flags across fragments, shared jumps, the `ebp` carrier), naming of
+  bodies `recomp_manual.c` wraps, stubs, the dispatch and CRT-initializer
+  tables, and `HAND_EDITS`, the one-off edits no rule produces.
+- `tools/recomp/config.py` -- per-XBE data: where each rule applies or was
+  never applied in the shipped tree, seed bodies, dispatch limits.
 
-Do not edit generated files casually. When a generated correction is general,
-implement it in the lifter/translator as well; keep a local generated patch only
-when the correction is specific to an imperfect function boundary or this XBE.
-
-### Generated support units
-
-Several generated translation units are deliberate pipeline supplements and
-must be recreated or preserved during regeneration:
-
-- `recomp_extra.c` and `recomp_extra2.c` cover seeded direct and indirect
-   targets that ordinary function discovery misses.
-- `recomp_fpufix.c` contains corrected x87 translations whose originals are
-   retained under alternate names.
-- `recomp_jumptables.c` carries switch bodies that cross imperfect detected
-   function boundaries.
-- `recomp_mwply.c` and `recomp_psgsfd.c` contain CRI movie functions emitted
-   from the non-main XBE code sections.
-- `recomp_seedattract.c` carries the eight attract-flow entry points that only
-   a function-pointer table references.
-
-Do not treat these files as disposable build products. A regeneration is not
-complete until their symbols and behavior are represented in the new output.
+Build Release and run the opening movie before accepting regenerated output.
 
 ## Lifter Defect Reference
 
