@@ -25,6 +25,7 @@
  *   different parameter layouts (pointer vs value), so each needs its own bridge.
  */
 
+#include "doa3_guest.h"
 #include "kernel.h"
 #include "xbox_memory_layout.h"
 #include "xbox_fiber.h"
@@ -55,7 +56,7 @@ recomp_func_t recomp_lookup_manual(uint32_t xbox_va);
 /* ── Synthetic VA range (for function exports) ─────────── */
 
 #define KERNEL_VA_BASE  0xFE000000u
-#define KERNEL_VA_END   (KERNEL_VA_BASE + XBOX_KERNEL_THUNK_TABLE_SIZE * 4)
+#define KERNEL_VA_END   (KERNEL_VA_BASE + XBOX_KERNEL_THUNK_SLOTS * 4)
 
 /* ── Kernel data exports ──────────────────────────────────
  *
@@ -94,6 +95,7 @@ static uint32_t kernel_data_va_for_ordinal(ULONG ordinal)
     case 355: return XBOX_KERNEL_DATA_BASE + KDATA_LAN_KEY;         /* alias */
     case 356: return XBOX_KERNEL_DATA_BASE + KDATA_ALT_SIGNATURE_KEYS; /* alias */
     case 357: return XBOX_KERNEL_DATA_BASE + KDATA_XE_PUBLIC_KEY;
+    case 354: return XBOX_KERNEL_DATA_BASE + KDATA_ALT_SIGNATURE_KEYS;  /* XboxAlternateSignatureKeys */
     default:  return 0;  /* Not a data export */
     }
 }
@@ -186,7 +188,7 @@ static void kernel_data_init(void)
 /* ── Per-slot ordinal and bridge function ────────────────── */
 
 /* Ordinal for each slot (read from Xbox memory during init) */
-static ULONG g_slot_ordinals[XBOX_KERNEL_THUNK_TABLE_SIZE];
+static ULONG g_slot_ordinals[XBOX_KERNEL_THUNK_SLOTS];
 
 /* Log counter - limit output to avoid flooding */
 /* 64-bit and unsigned: this counter gates every diagnostic below via
@@ -322,24 +324,38 @@ static void bridge_PsCreateSystemThreadEx(void)
  * state: STATUS_TIMEOUT while its fiber is alive (a zero timeout is a poll),
  * or block by yielding to it until it exits. Everything else keeps the old
  * behaviour (satisfied immediately). */
+/* The D3D vblank event (USA 0x001C2CF0), or 0 before the device exists. */
+static uint32_t d3d_vblank_event(void)
+{
+    uint32_t dev = doa3_guest_d3d_device();
+    return dev ? dev + g_guest->d3d_vblank_event_off : 0;
+}
+
+/* Signal the vblank event and wake the fibers waiting on it. */
+static void d3d_vblank_pulse(void)
+{
+    uint32_t ev = d3d_vblank_event();
+    if (!ev) return;
+    BRIDGE_MEM32(ev + 4) = 1;   /* SignalState */
+    xbox_fiber_wake(ev);
+}
+
 static void bridge_NtWaitForSingleObject(void)
 {
     uint32_t h = STACK_ARG(0);
     uint32_t timeout_va = STACK_ARG(2);
     if ((h & 0xFFFF0000u) == 0xBEEF0000u) {
-        const uint32_t install_ctx = 0x0009D440u;
+        const uint32_t install_ctx = g_guest->install_thread;
         int zero_timeout = timeout_va &&
                            BRIDGE_MEM32(timeout_va) == 0 && BRIDGE_MEM32(timeout_va + 4) == 0;
         if (xbox_fiber_thread_alive(install_ctx)) {
             if (xbox_fiber_active()) {
-                BRIDGE_MEM32(0x001C2CF0u + 4) = 1;   /* vblank pulse for the CRI workers */
-                xbox_fiber_wake(0x001C2CF0u);
+                d3d_vblank_pulse();                  /* vblank pulse for the CRI workers */
                 xbox_fiber_yield();
             }
             if (zero_timeout) { g_eax = 0x00000102u; return; }   /* STATUS_TIMEOUT */
             while (xbox_fiber_thread_alive(install_ctx) && xbox_fiber_active()) {
-                BRIDGE_MEM32(0x001C2CF0u + 4) = 1;
-                xbox_fiber_wake(0x001C2CF0u);
+                d3d_vblank_pulse();
                 xbox_fiber_yield();
             }
         }
@@ -759,7 +775,98 @@ static void bridge_KeQueryPerformanceFrequency(void)
     g_edx = (uint32_t)li.HighPart;
 }
 
+/* ── HalReadWritePCISpace (ordinal 46) ───────────────────── VOID
+ * HalReadWritePCISpace(Bus, Slot, Register, Buffer, Length, Write). */
+static void bridge_HalReadWritePCISpace(void)
+{
+    xbox_HalReadWritePCISpace(STACK_ARG(0), STACK_ARG(1), STACK_ARG(2),
+                              XBOX_TO_NATIVE(STACK_ARG(3)), STACK_ARG(4),
+                              (BOOLEAN)(STACK_ARG(5) & 0xFF));
+    g_eax = 0;
+}
+
 /* ── KeQuerySystemTime (ordinal 128) ─────────────────────── */
+/* XcSHAInit / XcSHAUpdate / XcSHAFinal: SHA-1 for the Japanese release's save
+ * signing (XCalculateSignature). The context lives in guest memory: */
+#define SHA_CTX_BYTES 92
+
+static uint32_t sha_rol(uint32_t x, int n) { return (x << n) | (x >> (32 - n)); }
+
+static void sha1_block(uint32_t h[5], const uint8_t *p)
+{
+    uint32_t w[80], a, b, c, d, e, t;
+    int i;
+    for (i = 0; i < 16; i++)
+        w[i] = (uint32_t)p[4 * i] << 24 | (uint32_t)p[4 * i + 1] << 16 |
+               (uint32_t)p[4 * i + 2] << 8 | p[4 * i + 3];
+    for (; i < 80; i++) w[i] = sha_rol(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
+    a = h[0]; b = h[1]; c = h[2]; d = h[3]; e = h[4];
+    for (i = 0; i < 80; i++) {
+        if (i < 20)      t = ((b & c) | (~b & d)) + 0x5A827999u;
+        else if (i < 40) t = (b ^ c ^ d) + 0x6ED9EBA1u;
+        else if (i < 60) t = ((b & c) | (b & d) | (c & d)) + 0x8F1BBCDCu;
+        else             t = (b ^ c ^ d) + 0xCA62C1D6u;
+        t += sha_rol(a, 5) + e + w[i];
+        e = d; d = c; c = sha_rol(b, 30); b = a; a = t;
+    }
+    h[0] += a; h[1] += b; h[2] += c; h[3] += d; h[4] += e;
+}
+
+static void sha1_update(uint8_t *ctx, const uint8_t *in, uint32_t len)
+{
+    uint32_t *h = (uint32_t *)ctx;
+    uint64_t bits;
+    uint32_t fill;
+    memcpy(&bits, ctx + 20, 8);
+    fill = (uint32_t)(bits / 8) % 64;
+    bits += (uint64_t)len * 8;
+    memcpy(ctx + 20, &bits, 8);
+    while (len) {
+        uint32_t n = 64 - fill < len ? 64 - fill : len;
+        memcpy(ctx + 28 + fill, in, n);
+        fill += n; in += n; len -= n;
+        if (fill == 64) { sha1_block(h, ctx + 28); fill = 0; }
+    }
+}
+
+static void bridge_XcSHAInit(void)
+{
+    static const uint32_t iv[5] = { 0x67452301u, 0xEFCDAB89u, 0x98BADCFEu,
+                                    0x10325476u, 0xC3D2E1F0u };
+    uint8_t *ctx = (uint8_t *)XBOX_TO_NATIVE(STACK_ARG(0));
+    if (ctx) { memset(ctx, 0, SHA_CTX_BYTES); memcpy(ctx, iv, sizeof iv); }
+    g_eax = 0;
+}
+
+static void bridge_XcSHAUpdate(void)
+{
+    uint8_t *ctx = (uint8_t *)XBOX_TO_NATIVE(STACK_ARG(0));
+    const uint8_t *in = (const uint8_t *)XBOX_TO_NATIVE(STACK_ARG(1));
+    if (ctx && in) sha1_update(ctx, in, STACK_ARG(2));
+    g_eax = 0;
+}
+
+static void bridge_XcSHAFinal(void)
+{
+    uint8_t *ctx = (uint8_t *)XBOX_TO_NATIVE(STACK_ARG(0));
+    uint8_t *out = (uint8_t *)XBOX_TO_NATIVE(STACK_ARG(1));
+    if (ctx) {
+        static const uint8_t pad[64] = { 0x80 };
+        uint8_t len_be[8];
+        uint64_t bits;
+        uint32_t fill, i;
+        memcpy(&bits, ctx + 20, 8);
+        for (i = 0; i < 8; i++) len_be[i] = (uint8_t)(bits >> (56 - 8 * i));
+        fill = (uint32_t)(bits / 8) % 64;
+        sha1_update(ctx, pad, fill < 56 ? 56 - fill : 120 - fill);
+        sha1_update(ctx, len_be, 8);
+        if (out)
+            for (i = 0; i < 20; i++)
+                out[i] = (uint8_t)(((uint32_t *)ctx)[i / 4] >> (24 - 8 * (i % 4)));
+    }
+    g_eax = 0;
+}
+
 static void bridge_KeQuerySystemTime(void)
 {
     uint32_t time_ptr = STACK_ARG(0);
@@ -861,7 +968,7 @@ static void bridge_KeWaitForSingleObject(void)
         uint32_t thi = timeout_ptr ? BRIDGE_MEM32(timeout_ptr + 4) : 0;
         g_kwait_log++;
     }
-    if (xbox_fiber_active() && obj == 0x001C2CF0u) {
+    if (xbox_fiber_active() && obj && obj == d3d_vblank_event()) {
         /* D3D vblank event: on hardware the GPU vblank interrupt signals it
          * every 16.7ms, so an INFINITE wait always returns. We have no GPU
          * interrupt; only boot-time diagnostic wrappers pulsed it, and once
@@ -876,7 +983,7 @@ static void bridge_KeWaitForSingleObject(void)
          * frame and the music stopped reading. The file server keeps
          * finishing all queued I/O inside the frame, so a load completes on
          * the same frame on both machines whatever music was in flight. */
-        if (g_xbox_det_active && xbox_fiber_current_ctx1() == 0x0016A570u)
+        if (g_xbox_det_active && xbox_fiber_current_ctx1() == g_guest->cri_vsync_thread)
             xbox_fiber_block(XBOX_DET_VBLANK_KEY);
         else if (g_xbox_det_active && (xbox_fiber_is_primary() || xbox_fiber_is_coroutine())) xbox_fiber_run_workers_idle(1024);
         else xbox_fiber_yield();
@@ -902,7 +1009,10 @@ static void bridge_KeWaitForSingleObject(void)
          * event N times and read the counter to see time pass; without the
          * bump they spin forever inside the frame (Present never runs, so
          * the SetFence-wrapper vblank emulation cannot advance it either). */
-        BRIDGE_MEM32(0x001C2B08u + 0x820u) = BRIDGE_MEM32(0x001C2B08u + 0x820u) + 1;
+        {
+            uint32_t count = doa3_guest_d3d_device() + g_guest->d3d_vblank_count_off;
+            BRIDGE_MEM32(count) = BRIDGE_MEM32(count) + 1;
+        }
         g_eax = 0;
         return;
     }
@@ -1063,21 +1173,6 @@ static void bridge_NtResumeThread(void)
         else if (xbox_fiber_is_primary())
             xbox_fiber_run_thread(handle);
     }
-    g_eax = 0;
-}
-
-/* ── HalReadSMCTrayState (ordinal 47) ─────────────────────
- * VOID HalReadSMCTrayState(PDWORD TrayState, PDWORD TrayStateChangeCount)
- *
- * Returns DVD tray state. 0x10 = no disc, 0x14 = tray closed with disc.
- */
-static void bridge_HalReadSMCTrayState(void)
-{
-    uint32_t state_ptr = STACK_ARG(0);
-    uint32_t count_ptr = STACK_ARG(1);
-
-    if (state_ptr) BRIDGE_MEM32(state_ptr) = 0x10;  /* No disc */
-    if (count_ptr) BRIDGE_MEM32(count_ptr) = 0;
     g_eax = 0;
 }
 
@@ -2472,7 +2567,7 @@ static int stdcall_args_for_ordinal(ULONG ordinal)
                            * left the tag on the stack after every sound allocation. */
     case  16: return  8;  /* ExAllocatePoolWithTag(2) */
     /* case  17: DATA export - ExEventObjectType */
-    case  24: return  4;  /* ExQueryPoolBlockSize(1) */
+    case  24: return g_guest->ord_args_fixed ? 20 : 4;  /* ExQueryNonVolatileSetting(5): see bridge_ExQueryPoolBlockSize */
 
     /* ── HAL ── */
     case  40: return  4;  /* HalClearSoftwareInterrupt(1) */
@@ -2483,7 +2578,7 @@ static int stdcall_args_for_ordinal(ULONG ordinal)
                            * and pop it afterwards, which was misread as a third argument.
                            * Popping 12 discarded that saved register and skewed every
                            * later pop in CMcpxAPU's stream init (sub_001CE8E6). */
-    case  46: return  8;  /* HalReadSMCTrayState(2) */
+    case  46: return 24;  /* HalReadWritePCISpace(6) */
     case  47: return  8;  /* HalRegisterShutdownNotification(&reg, Register): 2 args.
                            * All 8 call sites push two dwords and the first is a struct
                            * whose first field is a routine pointer (0x1CE9AA). */
@@ -2524,6 +2619,7 @@ static int stdcall_args_for_ordinal(ULONG ordinal)
     case 139: return  4;  /* KeRestoreFloatingPointState(1) */
     case 142: return  4;  /* KeSaveFloatingPointState(1) */
     case 143: return  8;  /* KeSetBasePriorityThread(2) */
+    case 144: return g_guest->ord_args_fixed ? 8 : 0;   /* KeSetDisableBoostThread(2) */
     case 145: return 12;  /* KeSetEvent(3) */
     case 149: return 16;  /* KeSetTimer(Timer+DueTime[8]+Dpc) */
     case 150: return 20;  /* KeSetTimerEx(Timer+DueTime[8]+Period+Dpc) */
@@ -2618,19 +2714,16 @@ static int stdcall_args_for_ordinal(ULONG ordinal)
     case 305: return  8;  /* RtlTimeToTimeFields(2) */
     case 308: return 12;  /* RtlUnicodeStringToAnsiString(3) */
     case 312: return 16;  /* RtlUnwind(4) */
-    case 354: return 12;  /* RtlRip(3) */
 
     /* ── Xbox Identity (data exports) ── */
     /* cases 322-328, 355-357: DATA exports */
 
-    /* ── Port I/O ── */
-    case 335: return 12;  /* WRITE_PORT_BUFFER_USHORT(3) */
-    case 336: return 12;  /* WRITE_PORT_BUFFER_ULONG(3) */
-
     /* ── Crypto ── */
-    case 337: return  4;  /* XcSHAInit(1) */
-    case 338: return 12;  /* XcSHAUpdate(3) */
-    case 339: return  8;  /* XcSHAFinal(2) */
+    case 335: return  4;  /* XcSHAInit(1) */
+    case 336: return 12;  /* XcSHAUpdate(3) */
+    case 337: return  8;  /* XcSHAFinal(2) */
+    case 338: return 12;  /* XcRC4Key(3) */
+    case 339: return 12;  /* XcRC4Crypt(3) */
     case 340: return 12;  /* XcRC4Key(3) */
     case 344: return 12;  /* XcPKDecPrivate(3) */
     case 345: return  4;  /* XcPKGetKeyLen(1) */
@@ -2638,6 +2731,7 @@ static int stdcall_args_for_ordinal(ULONG ordinal)
     case 347: return 20;  /* XcModExp(5) */
     case 349: return 12;  /* XcKeyTable(3) */
     case 353: return  8;  /* XcUpdateCrypto(2) */
+    case 354: return 12;  /* RtlRip(3) */
 
     default:  return  0;  /* DATA exports or truly unknown */
     }
@@ -2800,7 +2894,13 @@ static bridge_func_t bridge_for_ordinal(ULONG ordinal)
     case 238: return bridge_NtYieldExecution;
 
     /* Hardware */
+    case  46: return bridge_HalReadWritePCISpace;
     case  47: return bridge_HalRegisterShutdownNotification;
+
+    /* Crypto (the Japanese release signs its saves) */
+    case 335: return bridge_XcSHAInit;
+    case 336: return bridge_XcSHAUpdate;
+    case 337: return bridge_XcSHAFinal;
 
     /* Display */
     case   3: return bridge_AvSetDisplayMode;
@@ -2826,8 +2926,8 @@ static bridge_func_t bridge_for_ordinal(ULONG ordinal)
 
 /* ── Per-slot bridge functions (resolved at init) ────────── */
 
-static bridge_func_t g_slot_bridges[XBOX_KERNEL_THUNK_TABLE_SIZE];
-static int g_slot_arg_bytes[XBOX_KERNEL_THUNK_TABLE_SIZE];
+static bridge_func_t g_slot_bridges[XBOX_KERNEL_THUNK_SLOTS];
+static int g_slot_arg_bytes[XBOX_KERNEL_THUNK_SLOTS];
 
 /* Current dispatching slot */
 static int g_kernel_dispatch_slot = -1;
@@ -2838,7 +2938,7 @@ static void kernel_thunk_dispatch(void)
     bridge_func_t bridge;
     ULONG ordinal;
 
-    if (slot < 0 || slot >= XBOX_KERNEL_THUNK_TABLE_SIZE) {
+    if (slot < 0 || slot >= XBOX_KERNEL_THUNK_SLOTS) {
         g_eax = 0;
         g_esp += 4;  /* pop dummy return address */
         return;
@@ -2902,7 +3002,7 @@ recomp_func_t recomp_lookup_kernel(uint32_t xbox_va)
 {
     if (xbox_va >= KERNEL_VA_BASE && xbox_va < KERNEL_VA_END) {
         int slot = (xbox_va - KERNEL_VA_BASE) / 4;
-        if (slot >= 0 && slot < XBOX_KERNEL_THUNK_TABLE_SIZE) {
+        if (slot >= 0 && slot < XBOX_KERNEL_THUNK_SLOTS) {
             g_kernel_dispatch_slot = slot;
             return kernel_thunk_dispatch;
         }
@@ -2934,7 +3034,7 @@ void xbox_kernel_bridge_init(void)
      * Temporarily make it writable so we can patch the ordinals. */
     VirtualProtect(
         (LPVOID)((uintptr_t)XBOX_KERNEL_THUNK_TABLE_BASE + g_xbox_mem_offset),
-        XBOX_KERNEL_THUNK_TABLE_SIZE * 4,
+        XBOX_KERNEL_THUNK_SLOTS * 4,
         PAGE_READWRITE,
         &old_protect
     );
@@ -2942,9 +3042,12 @@ void xbox_kernel_bridge_init(void)
     /* Initialize kernel data export values first */
     kernel_data_init();
 
-    for (i = 0; i < XBOX_KERNEL_THUNK_TABLE_SIZE; i++) {
+    for (i = 0; i < XBOX_KERNEL_THUNK_SLOTS; i++) {
         uint32_t va = XBOX_KERNEL_THUNK_TABLE_BASE + i * 4;
         uint32_t current = BRIDGE_MEM32(va);
+
+        if (current == 0)
+            break;              /* end of the table */
 
         if (current & 0x80000000) {
             /* Read the actual ordinal from Xbox memory */
@@ -2981,7 +3084,7 @@ void xbox_kernel_bridge_init(void)
     /* Restore original protection */
     VirtualProtect(
         (LPVOID)((uintptr_t)XBOX_KERNEL_THUNK_TABLE_BASE + g_xbox_mem_offset),
-        XBOX_KERNEL_THUNK_TABLE_SIZE * 4,
+        XBOX_KERNEL_THUNK_SLOTS * 4,
         old_protect,
         &old_protect
     );

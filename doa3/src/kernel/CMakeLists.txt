@@ -25,6 +25,7 @@ set(KERNEL_SOURCES
     kernel_bridge.c
     xbox_fiber.c
     xbox_memory_layout.c
+    doa3_guest.c
 )
 
 # Create static library

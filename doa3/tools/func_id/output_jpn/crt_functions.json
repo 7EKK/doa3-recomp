@@ -1,0 +1,57 @@
+[
+  {
+    "address": "0x00059DB4",
+    "name": "_ftol",
+    "confidence": 0.9
+  },
+  {
+    "address": "0x00160410",
+    "name": "fmod",
+    "confidence": 0.9
+  },
+  {
+    "address": "0x001A0770",
+    "name": "strcpy",
+    "confidence": 0.9
+  },
+  {
+    "address": "0x001B73D0",
+    "name": "memmove",
+    "confidence": 0.9
+  },
+  {
+    "address": "0x001B7C32",
+    "name": "_purecall",
+    "confidence": 0.9
+  },
+  {
+    "address": "0x001B8470",
+    "name": "_allmul",
+    "confidence": 0.9
+  },
+  {
+    "address": "0x001B8780",
+    "name": "_aullshr",
+    "confidence": 0.9
+  },
+  {
+    "address": "0x001B8890",
+    "name": "_alldiv",
+    "confidence": 0.9
+  },
+  {
+    "address": "0x001B89B0",
+    "name": "_allshr",
+    "confidence": 0.9
+  },
+  {
+    "address": "0x001B8B98",
+    "name": "_ftol2",
+    "confidence": 0.9
+  },
+  {
+    "address": "0x001BE6AE",
+    "name": "strcmp",
+    "confidence": 0.9
+  }
+]

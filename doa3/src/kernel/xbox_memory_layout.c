@@ -16,42 +16,34 @@
 #include <stdio.h>
 #include <string.h>
 
-/* Section info from XBE analysis */
+/* Image layout, read from the XBE headers (see xbox_memory_layout.h). */
+uint32_t g_xbox_image_end;
+uint32_t g_xbox_thunk_table;
+uint32_t g_xbox_stack_base;
 
-/* .text raw file offset (XBE stores this at section header +0x0C) (DOA3) */
-#define TEXT_RAW_OFFSET         0x00001000
+static uint32_t g_heap_next, g_heap_limit;   /* low heap (see xbox_HeapAlloc) */
 
-/* .rdata raw file offset (DOA3) */
-#define RDATA_RAW_OFFSET        0x001DF000
+#define XBE_RETAIL_THUNK_KEY 0x5B6D40B6u   /* kernel thunk address XOR key */
 
-/* .data raw file offset (DOA3) */
-#define DATA_RAW_OFFSET         0x0020C000
+static uint32_t xbe_u32(const uint8_t *xbe, size_t off) { return *(const uint32_t *)(xbe + off); }
 
-/* Additional XBE sections to map (DOA3).
- * All sections are placed at their original Xbox VAs because the recompiled
- * code references library data/code by absolute address, and the game's data
- * structures may point into these regions. */
-static const struct {
-    const char *name;
-    DWORD va;
-    DWORD size;
-    DWORD raw_offset;
-} g_extra_sections[] = {
-    /* XDK library code sections (between .text and .rdata) */
-    { "D3D",       0x001B0DE0, 0x0000F36C, 0x001A1000 },
-    { "D3DX",      0x001C35C0, 0x00002EC0, 0x001B1000 },
-    { "XGRPH",     0x001C64A0, 0x000005FC, 0x001B4000 },
-    { "DSOUND",    0x001C6AA0, 0x0001AEB4, 0x001B5000 },
-    { "PSGSFD00",  0x001E1AA0, 0x00003190, 0x001D0000 },
-    { "PSGSFD_I",  0x001E4C40, 0x000001F0, 0x001D4000 },
-    { "PSGSFD_B",  0x001E4E40, 0x000006C0, 0x001D5000 },
-    { "PSGSFD_P",  0x001E5500, 0x00000430, 0x001D6000 },
-    { "XPP",       0x001E5940, 0x0000779C, 0x001D7000 },
-    /* Data sections past .data */
-    { "DOLBY",     0x00C27F60, 0x00006D84, 0x003B5000 },
-    { "$$XTIMAGE", 0x00C2ED00, 0x00002800, 0x003BC000 },
-};
-#define NUM_EXTRA_SECTIONS (sizeof(g_extra_sections) / sizeof(g_extra_sections[0]))
+/* Read the image end and kernel thunk table from the XBE header and place
+ * the fake TLS, scratch data and stack just past the image. */
+static BOOL xbe_read_layout(const uint8_t *xbe, size_t xbe_size)
+{
+    uint32_t page_end;
+    if (xbe_size < 0x200 || memcmp(xbe, "XBEH", 4) || xbe_u32(xbe, 0x104) != XBOX_BASE_ADDRESS) {
+        fprintf(stderr, "xbox_MemoryLayoutInit: not a retail XBE based at 0x%08X\n", XBOX_BASE_ADDRESS);
+        return FALSE;
+    }
+    g_xbox_image_end = XBOX_BASE_ADDRESS + xbe_u32(xbe, 0x10C);
+    g_xbox_thunk_table = xbe_u32(xbe, 0x158) ^ XBE_RETAIL_THUNK_KEY;
+    page_end = (g_xbox_image_end + 0xFFFu) & ~0xFFFu;
+    g_xbox_stack_base = page_end + XBOX_STACK_GAP;
+    fprintf(stderr, "  XBE layout: image end 0x%08X, kernel thunks 0x%08X, stack 0x%08X\n",
+            g_xbox_image_end, g_xbox_thunk_table, g_xbox_stack_base);
+    return TRUE;
+}
 
 static void *g_memory_base = NULL;
 static size_t g_memory_size = 0;
@@ -106,6 +98,8 @@ BOOL xbox_MemoryLayoutInit(const void *xbe_data, size_t xbe_size)
         fprintf(stderr, "xbox_MemoryLayoutInit: already initialized\n");
         return FALSE;
     }
+    if (!xbe_read_layout(xbe, xbe_size))
+        return FALSE;
 
     /*
      * Calculate the full range we need to map.
@@ -306,58 +300,33 @@ BOOL xbox_MemoryLayoutInit(const void *xbe_data, size_t xbe_size)
     }
 
     /*
-     * Copy .text section from XBE to its original Xbox VA.
+     * Copy every section's raw data to its original Xbox VA; the rest of
+     * each section (BSS) is already zero.
      *
-     * Even though the recompiled code runs natively (not from the .text
-     * section), the RW engine's memory walker processes ALL physical RAM
-     * as data structures, including the code pages. On Xbox, addresses
-     * past 64MB wrap back to lower memory via the RAM mirror. When the
-     * walker crosses 64MB and reads from mirrored .text addresses, it
-     * expects actual code bytes (not zeros). Without this, the walker's
-     * internal data structures are corrupted by zero-filled gaps.
+     * .text is copied too, even though the recompiled code runs natively:
+     * the RW engine's memory walker processes ALL physical RAM as data
+     * structures, including the code pages. On Xbox, addresses past 64MB
+     * wrap back to lower memory via the RAM mirror. When the walker crosses
+     * 64MB and reads from mirrored .text addresses, it expects actual code
+     * bytes (not zeros). Without this, the walker's internal data structures
+     * are corrupted by zero-filled gaps.
      */
-    if (TEXT_RAW_OFFSET + XBOX_TEXT_SIZE <= xbe_size) {
-        memcpy(XBOX_VA(XBOX_TEXT_VA), xbe + TEXT_RAW_OFFSET, XBOX_TEXT_SIZE);
-        fprintf(stderr, "  .text: %u bytes at %p (Xbox VA 0x%08X) [for memory walker]\n",
-                XBOX_TEXT_SIZE, XBOX_VA(XBOX_TEXT_VA), XBOX_TEXT_VA);
-    } else {
-        fprintf(stderr, "  WARNING: .text raw data out of bounds\n");
-    }
-
-    /*
-     * Copy .rdata section from XBE.
-     */
-    if (RDATA_RAW_OFFSET + XBOX_RDATA_SIZE <= xbe_size) {
-        memcpy(XBOX_VA(XBOX_RDATA_VA), xbe + RDATA_RAW_OFFSET, XBOX_RDATA_SIZE);
-        fprintf(stderr, "  .rdata: %u bytes at %p (Xbox VA 0x%08X)\n",
-                XBOX_RDATA_SIZE, XBOX_VA(XBOX_RDATA_VA), XBOX_RDATA_VA);
-    } else {
-        fprintf(stderr, "  WARNING: .rdata raw data out of bounds\n");
-    }
-
-    /*
-     * Copy initialized .data section from XBE.
-     * BSS (the rest of .data) is already zeroed by VirtualAlloc.
-     */
-    if (DATA_RAW_OFFSET + XBOX_DATA_INIT_SIZE <= xbe_size) {
-        memcpy(XBOX_VA(XBOX_DATA_VA), xbe + DATA_RAW_OFFSET, XBOX_DATA_INIT_SIZE);
-        fprintf(stderr, "  .data: %u bytes initialized, %u bytes BSS at %p (Xbox VA 0x%08X)\n",
-                XBOX_DATA_INIT_SIZE, XBOX_DATA_SIZE - XBOX_DATA_INIT_SIZE,
-                XBOX_VA(XBOX_DATA_VA), XBOX_DATA_VA);
-    } else {
-        fprintf(stderr, "  WARNING: .data raw data out of bounds\n");
-    }
-
-    /*
-     * Copy extra sections (DOLBY, XON_RD, .data1).
-     */
-    for (size_t i = 0; i < NUM_EXTRA_SECTIONS; i++) {
-        if (g_extra_sections[i].raw_offset + g_extra_sections[i].size <= xbe_size) {
-            memcpy(XBOX_VA(g_extra_sections[i].va),
-                   xbe + g_extra_sections[i].raw_offset, g_extra_sections[i].size);
-            fprintf(stderr, "  %s: %u bytes at %p (Xbox VA 0x%08X)\n",
-                    g_extra_sections[i].name, g_extra_sections[i].size,
-                    XBOX_VA(g_extra_sections[i].va), g_extra_sections[i].va);
+    {
+        uint32_t nsec = xbe_u32(xbe, 0x11C);
+        uint32_t hdr = xbe_u32(xbe, 0x120) - XBOX_BASE_ADDRESS;
+        for (uint32_t i = 0; i < nsec && (size_t)hdr + (i + 1) * 56 <= xbe_size; i++) {
+            const uint8_t *sh = xbe + hdr + i * 56;
+            uint32_t va = *(const uint32_t *)(sh + 4), vsize = *(const uint32_t *)(sh + 8);
+            uint32_t raw = *(const uint32_t *)(sh + 12), rsize = *(const uint32_t *)(sh + 16);
+            uint32_t name_off = *(const uint32_t *)(sh + 20) - XBOX_BASE_ADDRESS;
+            const char *name = name_off < xbe_size ? (const char *)xbe + name_off : "?";
+            if ((size_t)raw + rsize > xbe_size) {
+                fprintf(stderr, "  WARNING: %.9s raw data out of bounds\n", name);
+                continue;
+            }
+            memcpy(XBOX_VA(va), xbe + raw, rsize);
+            fprintf(stderr, "  %.9s: %u bytes (+%u BSS) at %p (Xbox VA 0x%08X)\n",
+                    name, rsize, vsize > rsize ? vsize - rsize : 0, XBOX_VA(va), va);
         }
     }
 
@@ -431,8 +400,8 @@ BOOL xbox_MemoryLayoutInit(const void *xbe_data, size_t xbe_size)
          * The stack base was lowered to 0x00C40000 to give the low heap the
          * 768 KB it needs for the driver's real depth buffer, so these two
          * pages moved down with it and now sit immediately after the image. */
-        #define FAKE_TLS_VA     0x00C32000  /* Fake TLS structure */
-        #define FAKE_RWDATA_VA  0x00C36000  /* Scratch context data area */
+        #define FAKE_TLS_VA     (XBOX_STACK_BASE - XBOX_STACK_GAP + XBOX_FAKE_TLS_OFF)  /* USA 0x00C32000 */
+        #define FAKE_RWDATA_VA  (XBOX_STACK_BASE - XBOX_STACK_GAP + XBOX_FAKE_RW_OFF)   /* USA 0x00C36000 */
 
         MEM32_INIT(0x28, FAKE_TLS_VA);
         /* TLS[0x28] = pointer to RW data area */
@@ -484,6 +453,8 @@ BOOL xbox_MemoryLayoutInit(const void *xbe_data, size_t xbe_size)
     }
 
     /* Initialize the dynamic heap. */
+    g_heap_next = XBOX_HEAP_BASE;
+    g_heap_limit = XBOX_HEAP_BASE + XBOX_HEAP_SIZE;
     fprintf(stderr, "  Heap: %u MB at Xbox VA 0x%08X-0x%08X\n",
             XBOX_HEAP_SIZE / (1024 * 1024), XBOX_HEAP_BASE,
             XBOX_HEAP_BASE + XBOX_HEAP_SIZE);
@@ -617,12 +588,12 @@ ptrdiff_t xbox_GetMemoryOffset(void)
  * Returns Xbox VAs within the mapped region so MEM32() works correctly.
  * No free support (bump-only for now).
  */
-static uint32_t g_heap_next = XBOX_HEAP_BASE;
+/* g_heap_next starts at XBOX_HEAP_BASE (set by xbox_MemoryLayoutInit). */
 /* Low-heap ceiling. Blocks reserved with xbox_HeapReserveTop() are carved
  * off the top and this drops to match, so the bump allocator below never
  * hands the same memory out. Reserving from the top rather than the front
  * leaves every game allocation at the address it had before. */
-static uint32_t g_heap_limit = XBOX_HEAP_BASE + XBOX_HEAP_SIZE;
+/* g_heap_limit starts at XBOX_HEAP_BASE + XBOX_HEAP_SIZE, likewise. */
 
 static int g_heap_alloc_count = 0;
 

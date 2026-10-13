@@ -19,6 +19,7 @@ import struct
 
 from .disasm import Instruction, Operand
 from .config import (is_code_address, is_data_address, va_to_file_offset, KERNEL_THUNK_ADDR, FTOL2_ADDR,
+                     SEH_PROLOG, SEH_EPILOG,
                      LEGACY_ICALL_FUNCS, LEGACY_FTOL2_CALL_FUNCS, LEGACY_FNSTSW_AH_FUNCS,
                      LEGACY_CONDTAIL_SYNC_FUNCS, PHYS_MASK_REWRITE, PHYS_MASK_RANGE,
                      FTOL2_TAIL_INLINE_FUNCS, CMPXCHG_UNFIXED, IF0_BODIES)
@@ -1279,11 +1280,9 @@ class Lifter:
     # SEH prolog/epilog addresses - these functions modify ebp for their
     # caller.  After calling __SEH_prolog, the caller must read back ebp
     # from g_seh_ebp.  Before returning, __SEH_prolog writes g_seh_ebp.
-    # DOA3: __SEH_prolog4 @ 0x0018F494, __SEH_epilog4 @ 0x0018F4CD
-    # (the entry's thread trampoline sub_00164C28 opens with
-    #  push 0x18; push <scopetable>; call 0x0018F494).
-    SEH_PROLOG = 0x0018F494  # __SEH_prolog4
-    SEH_EPILOG = 0x0018F4CD  # __SEH_epilog4
+    # The addresses are per release (config); USA:
+    SEH_PROLOG = SEH_PROLOG
+    SEH_EPILOG = SEH_EPILOG
 
     def _lift_call(self, insn, ops):
         # x86 'call' pushes return address then jumps.

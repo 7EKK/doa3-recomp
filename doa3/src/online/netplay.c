@@ -25,6 +25,7 @@
 #include <stdarg.h>
 #include <math.h>
 #include "netplay.h"
+#include "kernel/doa3_guest.h"
 #include "netplay_session.h"
 #include "net_upnp.h"
 #include "join_code.h"
@@ -1484,13 +1485,14 @@ void netplay_poll(void)
 
 void netplay_host(unsigned short port)
 {
+    if (!g_guest->online_play) return;   /* release without netplay */
     s_req_port = port;
     InterlockedExchange(&s_req_host, 1);
 }
 
 void netplay_use_code(const char *text)
 {
-    if (!text) return;
+    if (!text || !g_guest->online_play) return;
     strncpy(s_req_code_text, text, sizeof(s_req_code_text) - 1);
     s_req_code_text[sizeof(s_req_code_text) - 1] = 0;
     InterlockedExchange(&s_req_code, 1);

@@ -176,16 +176,33 @@ The analysis filename is retained for loader compatibility even though it
 contains DOA3 data. Use full disassembly; data sections marked executable by the
 XBE must still be excluded by section name.
 
+The Japanese release (`DOA3_JPN.exe`, its own build folder: `cmake -S . -B build_jpn -DDOA3_RELEASE=JPN`) is a separate
+build (XDK 4134) with its own tree in `gen_jpn/`. `DOA3_REGION=jpn` selects
+`config_jpn.py` and the `_jpn` outputs; seed and re-lift until nothing is added:
+
+```bash
+export DOA3_REGION=jpn X=../doa3gamefiles_jpn/default.xbe
+py -3 tools/xbe_parser/xbe_parser.py $X --json tools/xbe_parser/doa3_analysis_jpn.json --quiet
+py -3 -m tools.disasm $X --analysis-json tools/xbe_parser/doa3_analysis_jpn.json -o tools/disasm/output_jpn --force
+py -3 -m tools.func_id $X --functions tools/disasm/output_jpn/functions.json --strings tools/disasm/output_jpn/strings.json --xrefs tools/disasm/output_jpn/xrefs.json -o tools/func_id/output_jpn
+py -3 -m tools.recomp $X --all --split 1000
+py -3 -m tools.recomp.seed_missing_functions src/game/recomp/gen_jpn   # then func_id + recomp again
+```
+
+`tools/recomp/release_map.py` maps USA functions to their JPN counterparts.
+
 `src/game/recomp/gen/` is entirely pipeline output; do not edit it. Every fix
 lives in the pipeline:
 
 - `tools/recomp/lifter.py` -- instruction-level lifting rules.
 - `tools/recomp/translator.py` -- per-function rules (fall-throughs, deferred
   compares, flags across fragments, shared jumps, the `ebp` carrier), naming of
-  bodies `recomp_manual.c` wraps, stubs, the dispatch and CRT-initializer
-  tables, and `HAND_EDITS`, the one-off edits no rule produces.
-- `tools/recomp/config.py` -- per-XBE data: where each rule applies or was
-  never applied in the shipped tree, seed bodies, dispatch limits.
+  bodies `recomp_manual.c` wraps, stubs, and the dispatch and CRT-initializer
+  tables.
+- `tools/recomp/config_usa.py` / `config_jpn.py` -- per-XBE data: where each
+  rule applies or was never applied in the shipped tree, seed bodies, dispatch
+  limits, and `HAND_EDITS`, the one-off edits no rule produces.
+  `config.py` picks one by `DOA3_REGION`.
 
 Build Release and run the opening movie before accepting regenerated output.
 

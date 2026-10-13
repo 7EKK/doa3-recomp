@@ -7,9 +7,11 @@
  *   T:\               → <save_dir>\TitleData\
  *   U:\               → <save_dir>\UserData\
  *   Z:\               → <save_dir>\Cache\
+ *                       (<game_dir>\assets\ for a release with cache_on_disc)
  */
 
 #include "kernel.h"
+#include "doa3_guest.h"   /* g_guest->cache_on_disc */
 #include <stdio.h>
 #include <string.h>
 #include <shlobj.h>
@@ -179,6 +181,7 @@ BOOL xbox_translate_path(const char* xbox_path, WCHAR* win_path_buf, DWORD buf_s
         remainder = xbox_path + skip;
         base_dir = s_save_dir;
         sub_dir = L"\\Cache";
+        if (g_guest->cache_on_disc) { base_dir = s_game_dir; sub_dir = NULL; }
         goto translate;
     }
 

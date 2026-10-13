@@ -5,7 +5,7 @@ Usage:
     py -3 -m tools.recomp <xbe_path> [options]
 
 Options:
-    -o, --output-dir DIR    Output directory (default: tools/recomp/output)
+    -o, --output-dir DIR    Output directory (default: tools/recomp/output[_jpn])
     -f, --function ADDR     Translate a single function (hex address)
     -c, --category CAT      Translate functions of a specific category
     --game-only             Only translate game_engine + game_vtable + unknown functions
@@ -22,19 +22,18 @@ import os
 import sys
 import time
 
+from . import config
 from .translator import BatchTranslator
 from .output import write_summary, print_stats, generate_header
 
 
 def find_data_files():
     """Locate the disasm/func_id output files."""
-    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
     paths = {
-        "functions": os.path.join(base, "disasm", "output", "functions.json"),
-        "labels": os.path.join(base, "disasm", "output", "labels.json"),
-        "identified": os.path.join(base, "func_id", "output", "identified_functions.json"),
-        "abi": os.path.join(base, "abi_analysis", "output", "abi_functions.json"),
+        "functions": os.path.join(config.DISASM_OUTPUT_DIR, "functions.json"),
+        "labels": os.path.join(config.DISASM_OUTPUT_DIR, "labels.json"),
+        "identified": os.path.join(config.FUNC_ID_OUTPUT_DIR, "identified_functions.json"),
+        "abi": os.path.join(config.ABI_OUTPUT_DIR, "abi_functions.json"),
     }
 
     for key, path in paths.items():
@@ -86,7 +85,7 @@ def main():
                         help="Split output into files of N functions each")
     parser.add_argument("--gen-dir",
                         help="Output dir for split generated files "
-                             "(default: src/game/recomp/gen)")
+                             "(default: src/game/recomp/gen, gen_jpn for DOA3_REGION=jpn)")
 
     args = parser.parse_args()
 
@@ -135,8 +134,7 @@ def main():
 
     # Generate header mode
     if args.header:
-        output_dir = args.output_dir or os.path.join(
-            os.path.dirname(__file__), "output")
+        output_dir = args.output_dir or config.RECOMP_OUTPUT_DIR
         os.makedirs(output_dir, exist_ok=True)
 
         if args.game_only:
@@ -174,9 +172,7 @@ def main():
 
     if args.split:
         # Split output mode: multiple .c files + header + dispatch table
-        gen_dir = args.gen_dir or os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            "src", "game", "recomp", "gen")
+        gen_dir = args.gen_dir or config.GEN_DIR
 
         if args.max_funcs:
             funcs = funcs[:args.max_funcs]
@@ -212,8 +208,7 @@ def main():
         print_stats(stats)
 
     # Write summary
-    output_dir = args.output_dir or os.path.join(
-        os.path.dirname(__file__), "output")
+    output_dir = args.output_dir or config.RECOMP_OUTPUT_DIR
     summary_path = write_summary(stats, output_dir)
     print(f"\nSummary: {summary_path}", file=sys.stderr)
 

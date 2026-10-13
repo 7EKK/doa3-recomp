@@ -1,4 +1,5 @@
 /* Cooperative fiber scheduler — see xbox_fiber.h. */
+#include "doa3_guest.h"
 #include "xbox_fiber.h"
 #include "xbox_det.h"
 #include "xbox_memory_layout.h"          /* xbox_HeapAlloc */
@@ -189,7 +190,7 @@ int xbox_fiber_workers_ready(void)
          * READY; counting it meant "until idle" always ran to its cap, and
          * within that budget the file server's progress on a load depended
          * on how much music streaming was queued ahead of it. */
-        if (g_fib[i].ctx1 == 0x0016A530u) continue;
+        if (g_fib[i].ctx1 == g_guest->cri_watchdog_thread) continue;
         if (g_fib[i].state == FIB_READY) return 1;
     }
     return 0;

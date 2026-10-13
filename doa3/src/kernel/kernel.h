@@ -431,11 +431,14 @@ typedef VOID (*PIO_APC_ROUTINE)(
  * The thunk table is an array of function pointers at the XBE's kernel-thunk VA.
  * Game code calls kernel functions via: call [thunk_addr]
  * We fill this table at startup with our xbox_* implementations.
- * DOA3: table at VA 0x001ED0E0 (= .rdata start), 112 imports.
+ * DOA3: the VA comes from the XBE header (USA 0x001ED0E0, 112 imports;
+ * Japan 0x00217A00, 116 imports); the table ends at a zero entry.
  * (Resolution is by Xbox kernel ordinal, which is game-agnostic.)
  */
-#define XBOX_KERNEL_THUNK_TABLE_BASE  0x001ED0E0
-#define XBOX_KERNEL_THUNK_TABLE_SIZE  112
+extern uint32_t g_xbox_thunk_table;
+#define XBOX_KERNEL_THUNK_TABLE_BASE  g_xbox_thunk_table
+#define XBOX_KERNEL_THUNK_TABLE_SIZE  112   /* g_thunk_ordinals (USA) */
+#define XBOX_KERNEL_THUNK_SLOTS       128   /* bridge slots: any release's table */
 
 extern ULONG_PTR xbox_kernel_thunk_table[XBOX_KERNEL_THUNK_TABLE_SIZE];
 

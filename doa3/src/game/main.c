@@ -12,6 +12,7 @@
  */
 
 #include <windows.h>
+#include <shlobj.h>      /* SHGetFolderPathW: the release's save folder */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,9 +22,10 @@
 #include "../kernel/kernel.h"
 #include "../kernel/xbox_memory_layout.h"
 #include "../kernel/xbox_fiber.h"
+#include "../kernel/doa3_guest.h"
 #include "../d3d/d3d8_xbox.h"
 #include "../audio/dsound_xbox.h"
-#include "recomp/gen/recomp_funcs.h"
+#include "recomp_funcs.h"            /* this release's generated tree */
 #include "recomp/recomp_dispatch.h"   /* recomp_lookup for the CRT initializers */
 #include "ui/doa3_ui.h"
 #include "ui/doa3_setup.h"
@@ -31,7 +33,6 @@
 #include "video_settings.h"
 #include "log_settings.h"
 
-#define DOA3_ENTRY_POINT   0x001651A5
 /* Game files live in an "assets" folder next to the exe; the working
  * directory is set to the exe's folder at startup. */
 #define DOA3_XBE_PATH      "assets/default.xbe"
@@ -1188,6 +1189,9 @@ int main(int argc, char **argv)
     doa3_watchdog_start();   /* localise non-faulting hangs (see doa3_watchdog) */
     /* Run from the exe's folder, whatever the launcher's working directory:
      * the assets folder, the log and the ini files all sit next to the exe. */
+#ifdef DOA3_REGION_JPN
+    g_guest = &g_guest_jpn;      /* guest addresses the runtime relies on */
+#endif
     WCHAR assets_dir[MAX_PATH] = L"assets";
     {
         WCHAR exedir[MAX_PATH];
@@ -1264,7 +1268,18 @@ int main(int argc, char **argv)
            (unsigned long long)(uintptr_t)xbox_GetMemoryOffset());
 
     xbox_kernel_init();
+#ifdef DOA3_REGION_JPN
+    {   /* Japan saves apart from USA's (%LOCALAPPDATA%\DeadOrAlive3_JPN). */
+        WCHAR base[MAX_PATH]; char save_dir[MAX_PATH * 3];
+        if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, base)) &&
+            WideCharToMultiByte(CP_UTF8, 0, base, -1, save_dir, MAX_PATH * 2, NULL, NULL) > 0) {
+            strcat_s(save_dir, sizeof save_dir, "\\DeadOrAlive3_JPN");
+            xbox_path_init(NULL, save_dir);
+        } else xbox_path_init(NULL, NULL);
+    }
+#else
     xbox_path_init(NULL, NULL);   /* D:\ -> <exe folder>\assets */
+#endif
     xbox_kernel_bridge_init();
 
     /* Pre-initialize CRT bootstrap locks (replicates _mtinitlocks @ 0x00191ACA).
@@ -1279,10 +1294,10 @@ int main(int argc, char **argv)
      * the ptr just needs to be non-NULL; we use the CRT's own CS buffer at
      * 0xBF4CF0 (stride 0x1C), exactly as the original _mtinitlocks does. */
     {
-        uint32_t cs_addr = 0xBF4CF0;   /* DOA3 CS buffer array (BSS) */
+        uint32_t cs_addr = g_guest->crt_lock_cs;   /* DOA3 CS buffer array (BSS) */
         int locks = 0;
         for (int i = 0; i < 36; i++) {
-            uint32_t ptr_va  = 0x3C0FB8 + i * 8;
+            uint32_t ptr_va  = g_guest->crt_lock_table + i * 8;
             uint32_t flag_va = ptr_va + 4;
             if (MEM32(flag_va) == 1) {
                 MEM32(ptr_va) = cs_addr;
@@ -1399,9 +1414,9 @@ int main(int argc, char **argv)
      * The bodies live in recomp_ctors.c: they are only ever reached through
      * these tables, so direct-call function detection never found them. */
     {
-        static const struct { uint32_t lo, hi; const char *what; } s_ini[] = {
-            { 0x00219640u, 0x0021964Cu, "C initializers"   },  /* __xi_a .. __xi_z */
-            { 0x00219650u, 0x002196F4u, "C++ constructors" },  /* __xc_a .. __xc_z */
+        const struct { uint32_t lo, hi; const char *what; } s_ini[] = {
+            { g_guest->crt_xi_a, g_guest->crt_xi_z, "C initializers"   },  /* __xi_a .. __xi_z */
+            { g_guest->crt_xc_a, g_guest->crt_xc_z, "C++ constructors" },  /* __xc_a .. __xc_z */
         };
         /* DOA3_CRTMAX=N limits how many initializers run (bisecting a bad
          * one); DOA3_CRTMAX=0 disables them entirely. */
@@ -1450,11 +1465,11 @@ int main(int argc, char **argv)
         fflush(stderr);
     }
 
-    printf("Init complete. Entry=0x%08X  ESP=0x%08X\n", DOA3_ENTRY_POINT, g_esp);
+    printf("Init complete. Entry=0x%08X  ESP=0x%08X\n", g_guest->entry_point, g_esp);
     printf("\n--- Calling xbe_entry_point() ---\n");
     fflush(stdout);
 
-    if (getenv("DOA3_WATCHARR")) {
+    if (getenv("DOA3_WATCHARR") && g_guest == &g_guest_usa) {   /* USA addresses */
         extern uint32_t g_watch_arr_base, g_watch_arr_stride, g_watch_arr_n;
         /* wxCi cache registry, z:\ slot (0xC057C0 + 0x30*2 = 0xC05820):
          * +0x24 file count, +0x28 list head. Only one file ever registers,

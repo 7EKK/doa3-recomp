@@ -1,0 +1,47 @@
+{
+ "FALLTHROUGH_EXTRA": {
+  "000501F0": [
+   328595,
+   true
+  ],
+  "0015EB67": [
+   1436566,
+   true
+  ],
+  "001A11A0": [
+   1708507,
+   true
+  ],
+  "001B0D40": [
+   1772977,
+   true
+  ],
+  "001B401E": [
+   1786179,
+   true
+  ]
+ },
+ "FALLTHROUGH_SKIP": {
+  "0005DB59": null,
+  "0019E2B6": null,
+  "001A99CE": null,
+  "001B0DB1": null,
+  "001B0F87": null,
+  "001B13CD": null,
+  "001B16B5": null,
+  "001B6365": null
+ },
+ "FALLTHROUGH_RET": {},
+ "FALLTHROUGH_SYNC": {
+  "00044BBA": false,
+  "0017F4EF": true,
+  "001B7BF8": false
+ },
+ "CARRIER_HOLD_FUNCS": {},
+ "CARRIER_INHERIT_FUNCS": {
+  "00137464": null,
+  "0017F4EF": null
+ },
+ "CARRIER_SPLIT_PROLOGUE": {},
+ "CARRIER_SPLIT_EPILOGUE": {}
+}

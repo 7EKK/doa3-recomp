@@ -12,7 +12,7 @@
  */
 
 #define RECOMP_GENERATED_CODE
-#include "gen/recomp_funcs.h"
+#include "recomp_funcs.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <intrin.h>
@@ -665,6 +665,9 @@ void doa3_netplay_force_pads(uint32_t mask)
     MEM32(0x5E5CCC) = 0;
     s_xpp_prev_mask = mask;
 }
+/* Netplay: rebuild the per-port button maps from the save image (the caller
+ * pushes the return slot and keeps the registers). */
+void doa3_rebuild_button_maps(void) { sub_000BB270(); }
 /* CRT rand() (sub_0018EE60; seed at [[0x1C] + 0x14]). Netplay sessions
  * account for every call (netplay_note_rand). */
 void sub_0018EE60_gen(void);

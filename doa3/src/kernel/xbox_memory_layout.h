@@ -44,19 +44,10 @@ extern "C" {
  * game code reads from addresses like 0x20 and 0x28 (Xbox kernel structures). */
 #define XBOX_MAP_START          0x00000000
 
-/* .text section (DOA3) */
-#define XBOX_TEXT_VA            0x00011000
-#define XBOX_TEXT_SIZE          0x0019FDE0  /* 1,703,392 bytes */
-
-/* .rdata section (DOA3) */
-#define XBOX_RDATA_VA           0x001ED0E0
-#define XBOX_RDATA_SIZE         0x0002C53C  /* 181,564 bytes (raw) */
-
-/* .data section (includes BSS) (DOA3) */
-#define XBOX_DATA_VA            0x00219640
-#define XBOX_DATA_SIZE          0x00A0E91C  /* virtual size, ~10.5 MB incl. BSS */
-#define XBOX_DATA_INIT_SIZE     0x001A8450  /* Initialized data in XBE file (raw) */
-/* BSS starts at DATA_VA + DATA_INIT_SIZE, zero-initialized */
+/* The sections, the image end and the kernel thunk table are read from the
+ * XBE's own headers by xbox_MemoryLayoutInit, so every release (USA, Japan)... */
+extern uint32_t g_xbox_image_end;     /* base + SizeOfImage */
+extern uint32_t g_xbox_thunk_table;   /* kernel thunk table VA */
 
 /* Xbox physical memory */
 #define XBOX_TOTAL_RAM          (64 * 1024 * 1024)  /* 64 MB */
@@ -69,12 +60,6 @@ extern "C" {
  * allocates. */
 #define XBOX_NV2A_MMIO_BASE     0xFD000000u
 #define XBOX_NV2A_MMIO_SIZE     0x01000000u  /* 16 MB */
-
-/* End of mapped sections */
-#define XBOX_MAP_END            (XBOX_DATA_VA + XBOX_DATA_SIZE)
-
-/* Total virtual space needed (from XBOX_MAP_START, not XBOX_BASE_ADDRESS) */
-#define XBOX_MAP_TOTAL_SIZE     (XBOX_MAP_END - XBOX_MAP_START)
 
 /* ================================================================
  * Memory initialization
@@ -175,8 +160,10 @@ ptrdiff_t xbox_GetMemoryOffset(void);
                                                  * a surface it computed as one pixel wide. */
 
 /** Base VA of the stack area (above last XBE section).
- *  DOA3's image (incl. BSS, DOLBY, $$XTIMAGE) extends to ~0x00C31500, so the
- *  stack must sit above that, unlike Burnout 3 (which ended near 0x00770000).
+ *  DOA3's image (incl. BSS, DOLBY, $$XTIMAGE) extends to ~0x00C31500 (USA;
+ *  Japan 0x00CABB00), so the stack must sit above that, unlike Burnout 3
+ *  (which ended near 0x00770000). It is XBOX_STACK_GAP past the image end
+ *  rounded up to a page: 0x00C40000 for USA, 0x00CBA000 for Japan.
  *
  *  Sits directly above the fake TLS/RW-data pages (xbox_memory_layout.c) with
  *  no padding, because everything below XBOX_HEAP_BASE is low-heap space the
@@ -186,7 +173,11 @@ ptrdiff_t xbox_GetMemoryOffset(void);
  *  51.7 MB against a 51.4 MB heap and the asset loader died with
  *  "E9040828:'flid' is range outside". Dropping the base from 0x00D00000
  *  reclaims the 768 KB of dead gap between the image and the stack. */
-#define XBOX_STACK_BASE     0x00C40000
+#define XBOX_FAKE_TLS_OFF   0x0000u   /* fake TLS page, from the image end page */
+#define XBOX_FAKE_RW_OFF    0x4000u   /* scratch context data, from the image end page */
+#define XBOX_STACK_GAP      0xE000u   /* stack base, from the image end page */
+extern uint32_t g_xbox_stack_base;
+#define XBOX_STACK_BASE     g_xbox_stack_base
 
 /** Initial ESP value (top of stack, 16-byte aligned). */
 #define XBOX_STACK_TOP      (XBOX_STACK_BASE + XBOX_STACK_SIZE - 16)
