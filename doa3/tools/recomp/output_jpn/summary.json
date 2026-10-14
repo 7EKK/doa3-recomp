@@ -1,0 +1,25 @@
+{
+  "total": 10715,
+  "translated": 10708,
+  "failed": 7,
+  "total_lines": 1036413,
+  "files": [
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_funcs.h",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_0000.c",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_0001.c",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_0002.c",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_0003.c",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_0004.c",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_0005.c",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_0006.c",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_0007.c",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_0008.c",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_0009.c",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_0010.c",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_dispatch.c",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_ctors.c",
+    "C:/Users/parke/AppData/Local/Temp/claude/E--Projects-doa3-pc/7b4a1b53-628c-4cbc-9673-2e3e54c8f1aa/scratchpad/genj3\\recomp_stubs.c"
+  ],
+  "num_chunks": 11,
+  "chunk_size": 1000
+}

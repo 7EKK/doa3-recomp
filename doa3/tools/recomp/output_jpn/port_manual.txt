@@ -1,0 +1,887 @@
+kept 319 items, left out 369, stubbed 3
+
+table g_manual_funcs: rows left out
+    { 0x0011CE30u, sub_0011CE30 },   /* stage renderer draw thunk: call sub_00157700; ret 4 */
+    { 0x0011CE40u, sub_0011CE40 },   /* its no-op variant: ret 4 */
+    { 0x001CDCD8u, sub_001CDCD8 },   /* DSOUND page-manager vtable jmp stub */
+    { 0x001C792Eu, sub_001C792E },   /* CDirectSoundBuffer vtable Release jmp stub (folded into sub_001C7929) */
+    { 0x00172260u, sub_00172260 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x00172330u, sub_00172330 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x00172360u, sub_00172360 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x00172410u, sub_00172410 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x00172470u, sub_00172470 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x001724F0u, sub_001724F0 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x00172520u, sub_00172520 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x00172580u, sub_00172580 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x001725B0u, sub_001725B0 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x001725E0u, sub_001725E0 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x00172610u, sub_00172610 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x00172640u, sub_00172640 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x00172680u, sub_00172680 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x001726B0u, sub_001726B0 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+    { 0x001726D0u, sub_001726D0 },   /* CRI ADX sound-device method (recomp_extra3.c) */
+func sub_0016D330:
+    override target not instruction-identical in JPN (sim None)
+func sub_00170330:
+    0x001C2CF0: data address with no identical instruction naming it
+    0x001C2CF0: data address with no identical instruction naming it
+func sub_0009DC00:
+    sub_0009DC00: code address with no JPN counterpart
+func sub_0009DD20:
+    override target not instruction-identical in JPN (sim 0.642)
+func sub_00168DE0:
+    0x001C2CF0: data address with no identical instruction naming it
+    0x001C2CF0: data address with no identical instruction naming it
+func sub_001719E0:
+    sub_001719E0: code address with no JPN counterpart
+    sub_001719E0: code address with no JPN counterpart
+    sub_001719E0: code address with no JPN counterpart
+func sub_00169BC0:
+    override target not instruction-identical in JPN (sim 0.963)
+func sub_0016916F:
+    0x001C2CF0: data address with no identical instruction naming it
+    0x001C2CF0: data address with no identical instruction naming it
+func sub_0016D0F0:
+    override target not instruction-identical in JPN (sim 0.532)
+func sub_0016A530:
+    sub_0016A530: code address with no JPN counterpart
+    0x00B24D40: data address with no identical instruction naming it (neighbour guess 0040C700)
+    0x00B24D40: data address with no identical instruction naming it (neighbour guess 0040C700)
+    0x00B24D40: data address with no identical instruction naming it (neighbour guess 0040C700)
+    0x00B24D44: data address with no identical instruction naming it (neighbour guess 0040C704)
+    0x00B24D48: data address with no identical instruction naming it (neighbour guess 0040C708)
+func sub_0009F640:
+    sub_0009F640: code address with no JPN counterpart
+func sub_00055760:
+    sub_00055760: code address with no JPN counterpart
+    sub_00055760: code address with no JPN counterpart
+STUB func doa3_netplay_force_pads:
+    online only; the XInput pad block layout changed in XDK 4134 (0x5E5CC8 -> 0x73C6BC sits 0xC below the pads, not 8)
+STUB func doa3_rebuild_button_maps:
+    sub_000BB270: code address with no JPN counterpart
+func sub_0016C767:
+    override target not instruction-identical in JPN (sim None)
+func sub_0016C0F0:
+    override target not instruction-identical in JPN (sim None)
+func sub_0007E720:
+    override target not instruction-identical in JPN (sim 0.96)
+func sub_0007FFB0:
+    sub_0007FFB0: code address with no JPN counterpart
+    sub_0007FFB0: code address with no JPN counterpart
+func sub_000679A0:
+    sub_000679A0: code address with no JPN counterpart
+    sub_000679A0: code address with no JPN counterpart
+func sub_00068D90:
+    override target not instruction-identical in JPN (sim 0.777)
+func sub_0008038C:
+    sub_0008038C: code address with no JPN counterpart
+func sub_000804EB:
+    sub_000804EB: code address with no JPN counterpart
+func sub_0006B7E0:
+    sub_0006B7E0: code address with no JPN counterpart
+    sub_0006B7E0: code address with no JPN counterpart
+func sub_0006AAA0:
+    sub_0006AAA0: code address with no JPN counterpart
+func sub_0006AD20:
+    sub_0006AD20: code address with no JPN counterpart
+    sub_0006AD20: code address with no JPN counterpart
+func sub_0006ACD0:
+    sub_0006ACD0: code address with no JPN counterpart
+func sub_0006AADC:
+    sub_0006AADC: code address with no JPN counterpart
+func sub_0006AD6A:
+    sub_0006AD6A: code address with no JPN counterpart
+func sub_001C6740:
+    override target not instruction-identical in JPN (sim 0.909)
+func sub_0009DF60:
+    0x00331298: data address with no identical instruction naming it
+    0x00331298: data address with no identical instruction naming it
+func sub_0009DE90:
+    override target not instruction-identical in JPN (sim 0.808)
+func sub_00177810:
+    override target not instruction-identical in JPN (sim 0.923)
+func sub_001773E0:
+    override target not instruction-identical in JPN (sim 0.926)
+func sub_00082EB0:
+    sub_00082EB0: code address with no JPN counterpart
+func sub_00081EB0:
+    override target not instruction-identical in JPN (sim 0.974)
+func sub_0007FD90:
+    sub_0007FD90: code address with no JPN counterpart
+func sub_00176E90:
+    sub_00176E90: code address with no JPN counterpart
+func sub_00176DC0:
+    sub_00176DC0: code address with no JPN counterpart
+func sub_0016EEF0:
+    0x00C04380: data address with no identical instruction naming it (neighbour guess 00C7B220)
+func sub_0017F330:
+    override target not instruction-identical in JPN (sim 0.989)
+func sub_0017BCC0:
+    override target not instruction-identical in JPN (sim 0.896)
+func sub_0017AA20:
+    sub_0017AA20: code address with no JPN counterpart
+    sub_0017AA20: code address with no JPN counterpart
+func sub_0016ABF0:
+    sub_0016ABF0: code address with no JPN counterpart
+    sub_0016ABF0: code address with no JPN counterpart
+    0x00C09890: data address with no identical instruction naming it
+func sub_0016ACE0:
+    sub_0016ACE0: code address with no JPN counterpart
+    sub_0016ACE0: code address with no JPN counterpart
+    0x00C09890: data address with no identical instruction naming it
+func sub_00175B90:
+    override target not instruction-identical in JPN (sim 0.846)
+func sub_001768F0:
+    override target not instruction-identical in JPN (sim 0.767)
+func sub_0017C7B0:
+    override target not instruction-identical in JPN (sim 0.927)
+func sub_0017D4B0:
+    override target not instruction-identical in JPN (sim 0.97)
+func sub_0017D417:
+    sub_0017D417: code address with no JPN counterpart
+    sub_0017D417: code address with no JPN counterpart
+func doa3_relocate_picture_index:
+    0x00C0F7C0: data address with no identical instruction naming it
+func sub_0017F710:
+    override target not instruction-identical in JPN (sim 0.941)
+func sub_0017BDB0:
+    override target not instruction-identical in JPN (sim 0.702)
+func sub_0017AAF0:
+    override target not instruction-identical in JPN (sim 0.5)
+func sub_00179E60:
+    override target not instruction-identical in JPN (sim 0.525)
+func sub_00179C30:
+    override target not instruction-identical in JPN (sim 0.81)
+func doa3_slot_index_from_record:
+    0x00C12E2C: data address with no identical instruction naming it
+func doa3_snapshot_completed_plane:
+    0x00C0F7C0: data address with no identical instruction naming it
+func sub_00179A50:
+    0x00C12E2C: data address with no identical instruction naming it
+    0x00C12E2C: data address with no identical instruction naming it
+func sub_0017A6D0:
+    override target not instruction-identical in JPN (sim 0.917)
+func doa3_slot_rec_ok:
+    0x00C12E2C: data address with no identical instruction naming it
+    0x00C1300C: data address with no identical instruction naming it
+    0x00C12E2C: data address with no identical instruction naming it
+func doa3_slot_idx:
+    0x00C12E2C: data address with no identical instruction naming it
+func doa3_drain_deferred_releases:
+    uses left-out doa3_slot_idx
+func sub_0017DB10:
+    uses left-out doa3_slot_rec_ok
+func sub_0017DB30:
+    uses left-out doa3_slot_rec_ok
+func sub_0017DB00:
+    uses left-out doa3_slot_idx, doa3_slot_rec_ok, doa3_snapshot_completed_plane
+func sub_0017DAF0:
+    uses left-out doa3_slot_idx, doa3_slot_rec_ok, doa3_snapshot_completed_plane
+func sub_0017A540:
+    override target not instruction-identical in JPN (sim 0.946)
+func sub_0017E720:
+    override target not instruction-identical in JPN (sim 0.846)
+func sub_0017FB10:
+    0x00C1015C: data address with no identical instruction naming it
+    0x00C1015C: data address with no identical instruction naming it
+func sub_00182700:
+    override target not instruction-identical in JPN (sim 0.958)
+func sub_001827B0:
+    override target not instruction-identical in JPN (sim 0.964)
+func sub_0017A370:
+    override target not instruction-identical in JPN (sim 0.875)
+func sub_0017A400:
+    override target not instruction-identical in JPN (sim 0.945)
+func sub_0017AB40:
+    override target not instruction-identical in JPN (sim 0.917)
+func sub_0017A640:
+    0x00C0F7C0: data address with no identical instruction naming it
+func sub_00179990:
+    override target not instruction-identical in JPN (sim 0.762)
+func sub_001798B0:
+    override target not instruction-identical in JPN (sim 0.923)
+func sub_0017F130:
+    override target not instruction-identical in JPN (sim 0.985)
+func sub_0017B2D0:
+    override target not instruction-identical in JPN (sim 0.922)
+func sub_0017B100:
+    override target not instruction-identical in JPN (sim 0.977)
+func sub_0017B3F0:
+    override target not instruction-identical in JPN (sim 0.964)
+func sub_00179F00:
+    override target not instruction-identical in JPN (sim 0.985)
+func sub_0017F6D0:
+    0x002CC800: data address with no identical instruction naming it
+func sub_0017E9B0:
+    0x002CC800: data address with no identical instruction naming it
+    0x00C12E2C: data address with no identical instruction naming it
+func sub_0017D380:
+    override target not instruction-identical in JPN (sim 0.981)
+func sub_0017D470:
+    sub_0017D470: code address with no JPN counterpart
+    sub_0017D470: code address with no JPN counterpart
+func sub_001840F0:
+    override target not instruction-identical in JPN (sim 0.988)
+func sub_001842F0:
+    override target not instruction-identical in JPN (sim 0.909)
+func sub_001790C0:
+    sub_001790C0: code address with no JPN counterpart
+func sub_00178FD0:
+    sub_00178FD0: code address with no JPN counterpart
+func sub_0017B6D0:
+    sub_0017B6D0: code address with no JPN counterpart
+func sub_0016A130:
+    0x00C04380: data address with no identical instruction naming it (neighbour guess 00C7B220)
+func sub_0017D240:
+    override target not instruction-identical in JPN (sim 0.972)
+func sub_001C7DE1:
+    override target not instruction-identical in JPN (sim 0.667)
+func sub_001C8135:
+    sub_001C8135: code address with no JPN counterpart
+    sub_001C8135: code address with no JPN counterpart
+func sub_001C927C:
+    override target not instruction-identical in JPN (sim 0.929)
+func sub_001C7D21:
+    sub_001C7D21: code address with no JPN counterpart
+func sub_001C7C29:
+    override target not instruction-identical in JPN (sim 0.692)
+func sub_001CC584:
+    sub_001CC584: code address with no JPN counterpart
+func sub_001CCBA7:
+    sub_001CCBA7: code address with no JPN counterpart
+    sub_001CCBA7: code address with no JPN counterpart
+func sub_001CD60C:
+    override target not instruction-identical in JPN (sim 0.612)
+func sub_001789B0:
+    sub_001789B0: code address with no JPN counterpart
+    sub_001789B0: code address with no JPN counterpart
+func sub_0017EDC0:
+    override target not instruction-identical in JPN (sim 0.8)
+func sub_0017EDE0:
+    override target not instruction-identical in JPN (sim 0.973)
+func sub_0017EF40:
+    override target not instruction-identical in JPN (sim 0.8)
+func sub_00178A20:
+    sub_00178A20: code address with no JPN counterpart
+func sub_00178C20:
+    sub_00178C20: code address with no JPN counterpart
+func sub_00178CB0:
+    sub_00178CB0: code address with no JPN counterpart
+func sub_00178430:
+    sub_00178430: code address with no JPN counterpart
+func sub_001CA851:
+    override target not instruction-identical in JPN (sim 0.506)
+func sub_001C984F:
+    override target not instruction-identical in JPN (sim 0.667)
+func sub_00172260:
+    sub_00172260: code address with no JPN counterpart
+func sub_00172330:
+    sub_00172330: code address with no JPN counterpart
+func sub_00172360:
+    sub_00172360: code address with no JPN counterpart
+    sub_00172360: code address with no JPN counterpart
+func sub_00172410:
+    sub_00172410: code address with no JPN counterpart
+func sub_00172470:
+    sub_00172470: code address with no JPN counterpart
+func sub_001724F0:
+    sub_001724F0: code address with no JPN counterpart
+func sub_00172580:
+    sub_00172580: code address with no JPN counterpart
+func sub_001725B0:
+    sub_001725B0: code address with no JPN counterpart
+func sub_001725E0:
+    sub_001725E0: code address with no JPN counterpart
+func sub_00172610:
+    sub_00172610: code address with no JPN counterpart
+func sub_00172640:
+    sub_00172640: code address with no JPN counterpart
+func sub_00172680:
+    sub_00172680: code address with no JPN counterpart
+func sub_001726B0:
+    sub_001726B0: code address with no JPN counterpart
+func sub_001726D0:
+    sub_001726D0: code address with no JPN counterpart
+func sub_0007FFD0:
+    override target not instruction-identical in JPN (sim 0.84)
+func sub_0009CF10:
+    override target not instruction-identical in JPN (sim 0.529)
+func sub_0009D320:
+    sub_0009D320: code address with no JPN counterpart
+func sub_001C6B92:
+    sub_001C6B92: code address with no JPN counterpart
+func sub_001CCCE8:
+    sub_001CCCE8: code address with no JPN counterpart
+func sub_001CDCD8:
+    sub_001CDCD8: code address with no JPN counterpart
+    sub_001CDB16: code address with no JPN counterpart
+func sub_001C7C92:
+    override target not instruction-identical in JPN (sim 0.677)
+func sub_001C76DF:
+    sub_001C76DF: code address with no JPN counterpart
+func sub_001CCD0E:
+    sub_001CCD0E: code address with no JPN counterpart
+func sub_001C6DE3:
+    sub_001C6DE3: code address with no JPN counterpart
+func sub_001CCC97:
+    override target not instruction-identical in JPN (sim 0.632)
+func sub_001C7873:
+    override target not instruction-identical in JPN (sim 0.547)
+func sub_001CC223:
+    override target not instruction-identical in JPN (sim 0.753)
+func sub_001CE347:
+    override target not instruction-identical in JPN (sim 0.868)
+func sub_001CE564:
+    override target not instruction-identical in JPN (sim 0.906)
+func sub_001CE3AD:
+    override target not instruction-identical in JPN (sim 0.933)
+func sub_001CE2D7:
+    override target not instruction-identical in JPN (sim 0.821)
+func sub_001CD7A3:
+    sub_001CD7A3: code address with no JPN counterpart
+func sub_001CD6D8:
+    override target not instruction-identical in JPN (sim 0.974)
+func sub_001CCE10:
+    sub_001CCE10: code address with no JPN counterpart
+func sub_001CD1AA:
+    override target not instruction-identical in JPN (sim 0.63)
+func sub_001CD00F:
+    override target not instruction-identical in JPN (sim 0.653)
+func sub_001CD352:
+    override target not instruction-identical in JPN (sim 0.911)
+func sub_001CE507:
+    override target not instruction-identical in JPN (sim 0.877)
+func sub_001C925A:
+    override target not instruction-identical in JPN (sim 0.857)
+func sub_001CD8E8:
+    sub_001CD8E8: code address with no JPN counterpart
+func sub_001CCEE5:
+    sub_001CCEE5: code address with no JPN counterpart
+    sub_001CCEE5: code address with no JPN counterpart
+func sub_001CDDD5:
+    override target not instruction-identical in JPN (sim 0.917)
+func sub_001C8C9A:
+    sub_001C8C9A: code address with no JPN counterpart
+    sub_001C8C9A: code address with no JPN counterpart
+func sub_001CCB38:
+    sub_001CCB38: code address with no JPN counterpart
+    sub_001CCB38: code address with no JPN counterpart
+func sub_001C800C:
+    sub_001C800C: code address with no JPN counterpart
+func sub_001C7ECD:
+    sub_001C7ECD: code address with no JPN counterpart
+func sub_001C6AA0:
+    sub_001C6AA0: code address with no JPN counterpart
+func sub_001C765A:
+    sub_001C765A: code address with no JPN counterpart
+func sub_001C8A76:
+    sub_001C8A76: code address with no JPN counterpart
+    sub_001C8A76: code address with no JPN counterpart
+func sub_001C90C0:
+    sub_001C90C0: code address with no JPN counterpart
+func sub_000833E0:
+    sub_000833E0: code address with no JPN counterpart
+func sub_00084340:
+    sub_00084340: code address with no JPN counterpart
+    sub_00084340: code address with no JPN counterpart
+    sub_00084340: code address with no JPN counterpart
+func sub_00050940:
+    sub_00050940: code address with no JPN counterpart
+func sub_0009EF10:
+    override target not instruction-identical in JPN (sim 0.7)
+func sub_0009F010:
+    sub_0009F010: code address with no JPN counterpart
+func sub_0007FE50:
+    override target not instruction-identical in JPN (sim 0.967)
+func sub_0009DB30:
+    sub_0009DB30: code address with no JPN counterpart
+func sub_0009D8F0:
+    override target not instruction-identical in JPN (sim 0.855)
+func sub_0006E050:
+    sub_0006E050: code address with no JPN counterpart
+    sub_0006E050: code address with no JPN counterpart
+func sub_00080200:
+    sub_00080200: code address with no JPN counterpart
+func sub_00050060:
+    sub_00050060: code address with no JPN counterpart
+func sub_00082E90:
+    override target not instruction-identical in JPN (sim 0.625)
+func sub_00050995:
+    sub_00050995: code address with no JPN counterpart
+func sub_00077580:
+    override target not instruction-identical in JPN (sim 0.724)
+func sub_0007CC10:
+    override target not instruction-identical in JPN (sim 0.706)
+func sub_00076FC0:
+    sub_00076FC0: code address with no JPN counterpart
+func sub_000D5700:
+    override target not instruction-identical in JPN (sim 0.649)
+func sub_0007E9C0:
+    sub_0007E9C0: code address with no JPN counterpart
+func sub_0007E8C0:
+    sub_0007E8C0: code address with no JPN counterpart
+func sub_00076FE8:
+    sub_00076FE8: code address with no JPN counterpart
+func sub_00076FF6:
+    sub_00076FF6: code address with no JPN counterpart
+func sub_0006F6F0:
+    override target not instruction-identical in JPN (sim 0.922)
+func sub_00074470:
+    sub_00074470: code address with no JPN counterpart
+func sub_00070A00:
+    override target not instruction-identical in JPN (sim 0.933)
+func sub_0007F2A0:
+    sub_0007F2A0: code address with no JPN counterpart
+func sub_0007F350:
+    sub_0007F350: code address with no JPN counterpart
+func sub_0007F410:
+    override target not instruction-identical in JPN (sim 0.985)
+func sub_00080BD0:
+    sub_00080BD0: code address with no JPN counterpart
+func sub_0007ED10:
+    sub_0007ED10: code address with no JPN counterpart
+    sub_0007ED10: code address with no JPN counterpart
+func sub_00080C30:
+    override target not instruction-identical in JPN (sim 0.804)
+func sub_0007E9FA:
+    sub_0007E9FA: code address with no JPN counterpart
+func sub_0007EA0C:
+    sub_0007EA0C: code address with no JPN counterpart
+func sub_000810A0:
+    sub_000810A0: code address with no JPN counterpart
+func sub_00046B40:
+    override target not instruction-identical in JPN (sim 0.949)
+func sub_0007DD40:
+    override target not instruction-identical in JPN (sim 0.781)
+func doa3_wait_resource_load:
+    sub_00170710: code address with no JPN counterpart
+    sub_00170710: code address with no JPN counterpart
+func sub_00080020:
+    sub_00080020: code address with no JPN counterpart
+    sub_00080020: code address with no JPN counterpart
+func sub_00080070:
+    sub_00080070: code address with no JPN counterpart
+    sub_00080070: code address with no JPN counterpart
+func sub_0007E870:
+    override target not instruction-identical in JPN (sim None)
+func sub_0007E8A6:
+    override target not instruction-identical in JPN (sim None)
+func sub_0016CFB0:
+    sub_0016CFB0: code address with no JPN counterpart
+    sub_0016CFB0: code address with no JPN counterpart
+func sub_0016CFF0:
+    sub_0016CFF0: code address with no JPN counterpart
+    sub_0016CFF0: code address with no JPN counterpart
+func sub_000833C0:
+    sub_000833C0: code address with no JPN counterpart
+func sub_0009EFC0:
+    sub_0009EFC0: code address with no JPN counterpart
+func sub_0009EEB0:
+    sub_0009EEB0: code address with no JPN counterpart
+func sub_0009EEE0:
+    sub_0009EEE0: code address with no JPN counterpart
+func sub_00082060:
+    override target not instruction-identical in JPN (sim 0.708)
+func sub_00175AB0:
+    override target not instruction-identical in JPN (sim 0.889)
+func sub_000821B0:
+    override target not instruction-identical in JPN (sim 0.902)
+func sub_00050250:
+    sub_00050250: code address with no JPN counterpart
+    sub_00050250: code address with no JPN counterpart
+func sub_00050160:
+    sub_00050160: code address with no JPN counterpart
+    sub_00050160: code address with no JPN counterpart
+func sub_00083A90:
+    override target not instruction-identical in JPN (sim 0.863)
+func sub_00067220:
+    sub_00067220: code address with no JPN counterpart
+    sub_00067220: code address with no JPN counterpart
+func sub_000D02A0:
+    sub_000D02A0: code address with no JPN counterpart
+    sub_000D02A0: code address with no JPN counterpart
+func sub_000CEAC0:
+    sub_000CEAC0: code address with no JPN counterpart
+    sub_000CEAC0: code address with no JPN counterpart
+func sub_000CDCD0:
+    override target not instruction-identical in JPN (sim 0.918)
+func sub_00083BC0:
+    sub_00083BC0: code address with no JPN counterpart
+    sub_00083BC0: code address with no JPN counterpart
+func sub_00082950:
+    override target not instruction-identical in JPN (sim 0.741)
+func sub_000C5D70:
+    sub_000C5D70: code address with no JPN counterpart
+    sub_000C5D70: code address with no JPN counterpart
+func sub_000C4D00:
+    sub_000C4D00: code address with no JPN counterpart
+    sub_000C4D00: code address with no JPN counterpart
+func sub_00082F10:
+    sub_00082F10: code address with no JPN counterpart
+    sub_00082F10: code address with no JPN counterpart
+func sub_000CE7D0:
+    sub_000CE7D0: code address with no JPN counterpart
+    sub_000CE7D0: code address with no JPN counterpart
+func sub_000CF500:
+    sub_000CF500: code address with no JPN counterpart
+    sub_000CF500: code address with no JPN counterpart
+func sub_000C6E30:
+    sub_000C6E30: code address with no JPN counterpart
+    sub_000C6E30: code address with no JPN counterpart
+func sub_001BA7D8:
+    sub_001BA7D8: code address with no JPN counterpart
+    sub_001BA7D8: code address with no JPN counterpart
+func sub_001B1350:
+    sub_001B1350: code address with no JPN counterpart
+    sub_001B1350: code address with no JPN counterpart
+    0x001C3390: data address with no identical instruction naming it (neighbour guess 001EDE80)
+    0x001C3390: data address with no identical instruction naming it (neighbour guess 001EDE80)
+func sub_001B18A0:
+    0x001C3390: data address with no identical instruction naming it (neighbour guess 001EDE80)
+func sub_001B5FD0:
+    0x001C3390: data address with no identical instruction naming it (neighbour guess 001EDE80)
+func sub_001B7E50:
+    0x001C3390: data address with no identical instruction naming it (neighbour guess 001EDE80)
+func sub_000E00D0:
+    sub_000E00D0: code address with no JPN counterpart
+    sub_000E00D0: code address with no JPN counterpart
+func sub_0006D140:
+    override target not instruction-identical in JPN (sim 0.741)
+func sub_0006D1B0:
+    override target not instruction-identical in JPN (sim 0.632)
+func sub_0006D230:
+    override target not instruction-identical in JPN (sim 0.655)
+func sub_0006D410:
+    override target not instruction-identical in JPN (sim 0.722)
+func sub_00157700:
+    sub_00157700: code address with no JPN counterpart
+    sub_00157700: code address with no JPN counterpart
+func sub_001B3940:
+    override target not instruction-identical in JPN (sim 0.956)
+func sub_001B0EC0:
+    override target not instruction-identical in JPN (sim 0.821)
+func sub_001568B0:
+    sub_001568B0: code address with no JPN counterpart
+    sub_001568B0: code address with no JPN counterpart
+func sub_00156300:
+    sub_00156300: code address with no JPN counterpart
+    sub_00156300: code address with no JPN counterpart
+func sub_001B4960:
+    sub_001B4960: code address with no JPN counterpart
+    sub_001B4960: code address with no JPN counterpart
+func sub_0009EB90:
+    override target not instruction-identical in JPN (sim 0.941)
+func sub_0009E340:
+    override target not instruction-identical in JPN (sim 0.837)
+func sub_0009C840:
+    override target not instruction-identical in JPN (sim 0.729)
+func sub_0009F730:
+    override target not instruction-identical in JPN (sim 0.75)
+func sub_00169150:
+    0x001C2CF0: data address with no identical instruction naming it
+    0x001C2CF0: data address with no identical instruction naming it
+func sub_0009FAB0:
+    sub_0009FAB0: code address with no JPN counterpart
+    sub_0009FAB0: code address with no JPN counterpart
+    sub_0009FAB0: code address with no JPN counterpart
+func sub_0009DDB0:
+    0x001C2CF0: data address with no identical instruction naming it
+    0x001C2CF0: data address with no identical instruction naming it
+func sub_00157FB0:
+    sub_00157FB0: code address with no JPN counterpart
+    sub_00157FB0: code address with no JPN counterpart
+func sub_0006E0B0:
+    override target not instruction-identical in JPN (sim 0.753)
+func sub_00069BF3:
+    override target not instruction-identical in JPN (sim None)
+func sub_00055AD0:
+    sub_00055AD0: code address with no JPN counterpart
+    sub_00055AD0: code address with no JPN counterpart
+func sub_0006C480:
+    override target not instruction-identical in JPN (sim 0.638)
+func sub_00021F70:
+    sub_00021F70: code address with no JPN counterpart
+    sub_00021F70: code address with no JPN counterpart
+func sub_000572C0:
+    sub_000572C0: code address with no JPN counterpart
+    sub_000572C0: code address with no JPN counterpart
+func sub_001C3C65:
+    sub_001C3C65: code address with no JPN counterpart
+    sub_001C3C65: code address with no JPN counterpart
+func sub_001BEEFE:
+    override target not instruction-identical in JPN (sim 0.667)
+func sub_001B2440:
+    sub_001B2440: code address with no JPN counterpart
+func sub_001B23C0:
+    sub_001B23C0: code address with no JPN counterpart
+func sub_001B2800:
+    override target not instruction-identical in JPN (sim 0.895)
+func sub_001B2520:
+    override target not instruction-identical in JPN (sim 0.933)
+func sub_001B28F0:
+    override target not instruction-identical in JPN (sim 0.688)
+func sub_001B45F0:
+    0x001C3390: data address with no identical instruction naming it (neighbour guess 001EDE80)
+func sub_001B2390:
+    sub_001B8B00: code address with no JPN counterpart
+    sub_001B8B00: code address with no JPN counterpart
+    0x001C3390: data address with no identical instruction naming it (neighbour guess 001EDE80)
+func sub_001B2930:
+    sub_001B2930: code address with no JPN counterpart
+func sub_001B1CC0:
+    sub_001B1CC0: code address with no JPN counterpart
+    sub_001B1CC0: code address with no JPN counterpart
+func sub_001B4230:
+    override target not instruction-identical in JPN (sim 0.585)
+func sub_001B10B0:
+    override target not instruction-identical in JPN (sim 0.667)
+func sub_001B7690:
+    sub_001B7690: code address with no JPN counterpart
+    sub_001B7690: code address with no JPN counterpart
+func sub_001B6610:
+    sub_001B6610: code address with no JPN counterpart
+    sub_001B6610: code address with no JPN counterpart
+func sub_001B6120:
+    override target not instruction-identical in JPN (sim 0.72)
+func sub_001B69F0:
+    sub_001B69F0: code address with no JPN counterpart
+func sub_001B74A0:
+    override target not instruction-identical in JPN (sim 0.776)
+func sub_001B6810:
+    override target not instruction-identical in JPN (sim 0.91)
+func sub_001B6290:
+    override target not instruction-identical in JPN (sim 0.913)
+func sub_001BCC00:
+    sub_001BCC00: code address with no JPN counterpart
+    sub_001BCC00: code address with no JPN counterpart
+func sub_001BC260:
+    sub_001BC260: code address with no JPN counterpart
+    sub_001BC260: code address with no JPN counterpart
+func sub_001B7180:
+    sub_001B7180: code address with no JPN counterpart
+func sub_001B6410:
+    sub_001B6410: code address with no JPN counterpart
+    sub_001B6410: code address with no JPN counterpart
+func sub_001B3760:
+    sub_001B3760: code address with no JPN counterpart
+    sub_001B79F0: code address with no JPN counterpart
+    sub_001B79F0: code address with no JPN counterpart
+    sub_001B3760: code address with no JPN counterpart
+    0x001C3390: data address with no identical instruction naming it (neighbour guess 001EDE80)
+    0x00040100: code address with no JPN counterpart
+func sub_00083920:
+    override target not instruction-identical in JPN (sim 0.671)
+func sub_00176CE0:
+    sub_00176CE0: code address with no JPN counterpart
+    sub_00176CE0: code address with no JPN counterpart
+func sub_00177170:
+    sub_00177170: code address with no JPN counterpart
+    sub_00177170: code address with no JPN counterpart
+func sub_0009E1F0:
+    override target not instruction-identical in JPN (sim 0.663)
+func sub_001B37DC:
+    sub_001B37DC: code address with no JPN counterpart
+    sub_001B37F0: code address with no JPN counterpart
+func sub_001B37EC:
+    sub_001B37EC: code address with no JPN counterpart
+    sub_001B37F0: code address with no JPN counterpart
+func sub_001B37F0:
+    sub_001B37F0: code address with no JPN counterpart
+func sub_001C4069:
+    sub_001C4069: code address with no JPN counterpart
+func sub_00069C70:
+    sub_00069C70: code address with no JPN counterpart
+func sub_000566D0:
+    sub_000566D0: code address with no JPN counterpart
+    0x00491AFC: data address with no identical instruction naming it (neighbour guess 005A8848)
+    0x00491AF8: data address with no identical instruction naming it (neighbour guess 005A8844)
+    0x00491AF4: data address with no identical instruction naming it (neighbour guess 005A8840)
+    0x00305B70: data address with no identical instruction naming it
+    0x00305B70: data address with no identical instruction naming it
+func sub_00069B60:
+    sub_00069B60: code address with no JPN counterpart
+func sub_00069BD0:
+    override target not instruction-identical in JPN (sim 0.909)
+func sub_001BB770:
+    override target not instruction-identical in JPN (sim 0.717)
+func sub_001BB256:
+    override target not instruction-identical in JPN (sim 0.95)
+func sub_001BB66A:
+    override target not instruction-identical in JPN (sim 0.797)
+func sub_001B8EE0:
+    override target not instruction-identical in JPN (sim 0.615)
+func sub_001B4F60:
+    sub_001B4F60: code address with no JPN counterpart
+func sub_001B52E0:
+    sub_001B52E0: code address with no JPN counterpart
+func sub_001B5618:
+    sub_001B5618: code address with no JPN counterpart
+    sub_001B5618: code address with no JPN counterpart
+func sub_001B58AD:
+    sub_001B58AD: code address with no JPN counterpart
+    sub_001B58AD: code address with no JPN counterpart
+func sub_001B9130:
+    sub_001B9130: code address with no JPN counterpart
+func sub_001BEBC0:
+    override target not instruction-identical in JPN (sim 0.694)
+func sub_001C883B:
+    sub_001C883B: code address with no JPN counterpart
+func sub_001C6D91:
+    override target not instruction-identical in JPN (sim 0.667)
+func sub_001C760D:
+    override target not instruction-identical in JPN (sim 0.929)
+func sub_0009DC40:
+    sub_0009DC40: code address with no JPN counterpart
+func sub_0009EE80:
+    override target not instruction-identical in JPN (sim 0.958)
+func sub_00153D90:
+    sub_00153D90: code address with no JPN counterpart
+func sub_00153EC0:
+    sub_00153EC0: code address with no JPN counterpart
+func sub_00153D70:
+    sub_00153D70: code address with no JPN counterpart
+func sub_000A02A0:
+    override target not instruction-identical in JPN (sim 0.716)
+func sub_00153EF0:
+    override target not instruction-identical in JPN (sim 0.715)
+func sub_0006D7F0:
+    sub_0006D7F0: code address with no JPN counterpart
+    sub_0006D7F0: code address with no JPN counterpart
+func sub_001C408A:
+    sub_001C408A: code address with no JPN counterpart
+    sub_001C408A: code address with no JPN counterpart
+func sub_001BE60A:
+    override target not instruction-identical in JPN (sim 0.946)
+func sub_001BE5FC:
+    override target not instruction-identical in JPN (sim 0.833)
+func sub_000403F0:
+    sub_000403F0: code address with no JPN counterpart
+    sub_000403F0: code address with no JPN counterpart
+func sub_00080F10:
+    override target not instruction-identical in JPN (sim 0.911)
+func sub_00080D00:
+    sub_00080D00: code address with no JPN counterpart
+    sub_00080D00: code address with no JPN counterpart
+func doa3_pb_tss_marker:
+    0x001C3390: data address with no identical instruction naming it (neighbour guess 001EDE80)
+    0x00040100: code address with no JPN counterpart
+    0x001C0200: data address with no identical instruction naming it (neighbour guess 001EADF0)
+    0x001C0180: data address with no identical instruction naming it (neighbour guess 001EAD70)
+    0x001C0188: data address with no identical instruction naming it (neighbour guess 001EAD70)
+    0x001C018C: data address with no identical instruction naming it (neighbour guess 001EAD74)
+func sub_001B88C0:
+    sub_001B88C0: code address with no JPN counterpart
+func doa3_walk_canary:
+    0x00B1F388: data address with no identical instruction naming it (neighbour guess 00C58A78)
+func sub_00158DE0:
+    override target not instruction-identical in JPN (sim 0.681)
+func sub_001B8B00:
+    sub_001B8B00: code address with no JPN counterpart
+func sub_001B8A10:
+    override target not instruction-identical in JPN (sim 0.793)
+func sub_00186D00:
+    override target not instruction-identical in JPN (sim 0.871)
+func sub_001777C0:
+    sub_001777C0: code address with no JPN counterpart
+    sub_001777C0: code address with no JPN counterpart
+macro RESUME_GUARD:
+    0x00C0F7C0: data address with no identical instruction naming it
+func sub_001E5B0C:
+    uses left-out RESUME_GUARD
+func sub_001E5C23:
+    sub_001E5C23: code address with no JPN counterpart
+func sub_001E63D2:
+    sub_001E63D2: code address with no JPN counterpart
+func sub_001E6E02:
+    sub_001E6E02: code address with no JPN counterpart
+func sub_001E5040:
+    sub_001E5040: code address with no JPN counterpart
+func sub_001E5500:
+    sub_001E5500: code address with no JPN counterpart
+func sub_0018137A:
+    override target not instruction-identical in JPN (sim None)
+func sub_0018137C:
+    override target not instruction-identical in JPN (sim None)
+func sub_001E3670:
+    sub_001E3670: code address with no JPN counterpart
+func sub_001E3060:
+    sub_001E3060: code address with no JPN counterpart
+func sub_001E3520:
+    sub_001E3520: code address with no JPN counterpart
+func sub_001E32D0:
+    sub_001E32D0: code address with no JPN counterpart
+func sub_001E3010:
+    sub_001E3010: code address with no JPN counterpart
+func sub_001E4C40:
+    sub_001E4C40: code address with no JPN counterpart
+    sub_001E4C40: code address with no JPN counterpart
+func sub_0017DA20:
+    override target not instruction-identical in JPN (sim 0.919)
+func sub_0017EE50:
+    override target not instruction-identical in JPN (sim 0.895)
+func sub_0017AEB0:
+    override target not instruction-identical in JPN (sim 0.986)
+func sub_001762B0:
+    0x00C0F7C0: data address with no identical instruction naming it
+    0x00C0F7C0: data address with no identical instruction naming it
+    0x00B25778: data address with no identical instruction naming it (neighbour guess 00C9F1C0)
+STUB func doa3_pump_cri_servers:
+    sub_00170710: code address with no JPN counterpart
+    sub_00170710: code address with no JPN counterpart
+    0x00C0F7C0: data address with no identical instruction naming it
+    0x00C0F7C0: data address with no identical instruction naming it
+    0x00C0F7C0: data address with no identical instruction naming it
+    0x00C0F7C0: data address with no identical instruction naming it
+func sub_001B8970:
+    sub_001B8970: code address with no JPN counterpart
+    sub_001B8970: code address with no JPN counterpart
+    sub_001B8970: code address with no JPN counterpart
+    0x001C2B08: data address with no identical instruction naming it
+    0x001C2CF0: data address with no identical instruction naming it
+    0x001C2CF0: data address with no identical instruction naming it
+func sub_001B8DC0:
+    sub_001B8DC0: code address with no JPN counterpart
+func sub_001B8DA0:
+    sub_001B8DA0: code address with no JPN counterpart
+func sbh_bump_raw:
+    0x000FFFFF: code address with no JPN counterpart
+    0x000FFFFF: code address with no JPN counterpart
+func sbh_alloc:
+    uses left-out sbh_bump_raw
+func sub_001668FA:
+    uses left-out sbh_alloc
+func sub_00172520:
+    sub_00172520: code address with no JPN counterpart
+func sub_001C792E:
+    sub_001C792E: code address with no JPN counterpart
+    sub_001C6BEF: code address with no JPN counterpart
+func sub_0011CE30:
+    sub_0011CE30: code address with no JPN counterpart
+    sub_00157700: code address with no JPN counterpart
+func sub_0011CE40:
+    sub_0011CE40: code address with no JPN counterpart
+func sub_0017A2A0:
+    override target not instruction-identical in JPN (sim 0.961)
+func sub_001797FF:
+    override target not instruction-identical in JPN (sim None)
+func sub_001809FE:
+    override target not instruction-identical in JPN (sim None)
+func sub_000910B9:
+    override target not instruction-identical in JPN (sim None)
+func sub_001B15B0:
+    override target not instruction-identical in JPN (sim 0.71)
+func sub_001B1870:
+    override target not instruction-identical in JPN (sim 0.917)
+func sub_0017F750:
+    override target not instruction-identical in JPN (sim 0.833)
+func sub_0017EEE0:
+    override target not instruction-identical in JPN (sim 0.833)
+func sub_00172770:
+    sub_00172770: code address with no JPN counterpart
+    sub_00172770: code address with no JPN counterpart
+func sub_001B4B80:
+    override target not instruction-identical in JPN (sim 0.93)
+func sub_001BA530:
+    override target not instruction-identical in JPN (sim 0.939)
+func sub_001B4C10:
+    override target not instruction-identical in JPN (sim None)

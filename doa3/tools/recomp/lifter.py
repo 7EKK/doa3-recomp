@@ -18,7 +18,11 @@ import re
 import struct
 
 from .disasm import Instruction, Operand
-from .config import is_code_address, is_data_address, va_to_file_offset, KERNEL_THUNK_ADDR
+from .config import (is_code_address, is_data_address, va_to_file_offset, KERNEL_THUNK_ADDR, FTOL2_ADDR,
+                     SEH_PROLOG, SEH_EPILOG,
+                     LEGACY_ICALL_FUNCS, LEGACY_FTOL2_CALL_FUNCS, LEGACY_FNSTSW_AH_FUNCS,
+                     LEGACY_CONDTAIL_SYNC_FUNCS, PHYS_MASK_REWRITE, PHYS_MASK_RANGE,
+                     FTOL2_TAIL_INLINE_FUNCS, CMPXCHG_UNFIXED, IF0_BODIES)
 
 
 # ── Operand formatting ──────────────────────────────────────
@@ -375,6 +379,10 @@ _EFLAGS_PRESERVE = frozenset({
 
 
 
+def _narrow_expr(expr):
+    return expr.lstrip("(").startswith(("LO8(", "HI8(", "MEM8(", "LO16(", "MEM16("))
+
+
 def _sign_cast(expr):
     """C cast that reproduces the x86 sign flag for the operand width of a lifted
     expression (DOA3 2026-09-20: `test al,al / jns` was emitted as a 32-bit
@@ -475,6 +483,13 @@ def _make_condition(jcc, flag_setter, flag_ops):
 
     # ── test: flags from (a & b), operands unchanged ──
     if flag_setter == "test":
+        if jcc in ("jge", "jle", "jg") and _narrow_expr(lhs):
+            s_, z_ = f"TEST_S({lhs}, {rhs})", f"TEST_Z({lhs}, {rhs})"
+            if jcc == "jge":
+                return f"!{s_}", desc
+            if jcc == "jle":
+                return f"({s_} || {z_})", desc
+            return f"(!{s_} && !{z_})", desc
         if test_macro:
             return f"{test_macro}({lhs}, {rhs})", desc
         if cmp_macro:
@@ -732,9 +747,12 @@ def _emit_cond_goto(cond_expr, jcc, desc, target, lifter):
         return f"if ({cond_expr}) {{ /* {jcc}: {desc} - indirect */ }}"
     if lifter and lifter._is_external_target(target):
         name = lifter._call_target_name(target)
-        # Conditional tail-jmp: sync g_seh_ebp like the unconditional tail-jmp does,
-        # so fpo_leaf callees inherit the CURRENT frame pointer (not a stale one).
-        return (f"if ({cond_expr}) {{ g_seh_ebp = ebp; {name}(); return; }}"
+        # Conditional tail-jmp. The g_seh_ebp sync is added by the translator
+        # in functions that keep a local ebp (fix_cond_tailcall_ebp).
+        if lifter.func_start in LEGACY_CONDTAIL_SYNC_FUNCS:
+            return (f"if ({cond_expr}) {{ g_seh_ebp = ebp; {name}(); return; }}"
+                    f" /* {jcc}: {desc} */")
+        return (f"if ({cond_expr}) {{ {name}(); return; }}"
                 f" /* {jcc}: {desc} */")
     return f"if ({cond_expr}) goto loc_{target:08X}; /* {jcc}: {desc} */"
 
@@ -873,6 +891,12 @@ class Lifter:
             return self._lift_pop(insn, ops)
 
         # ── Arithmetic ──
+        if (m == "and" and nops == 2 and ops[1].type == "imm"
+                and ops[1].imm in PHYS_MASK_REWRITE
+                and PHYS_MASK_RANGE[0] <= insn.address < PHYS_MASK_RANGE[1]
+                and self.func_start not in IF0_BODIES):   # not compiled
+            import dataclasses
+            ops = [ops[0], dataclasses.replace(ops[1], imm=PHYS_MASK_REWRITE[ops[1].imm])]
         if m in ("add", "sub", "and", "or", "xor"):
             return self._lift_alu_binop(insn, ops, m)
         if m in ("inc", "dec"):
@@ -1256,16 +1280,20 @@ class Lifter:
     # SEH prolog/epilog addresses - these functions modify ebp for their
     # caller.  After calling __SEH_prolog, the caller must read back ebp
     # from g_seh_ebp.  Before returning, __SEH_prolog writes g_seh_ebp.
-    # DOA3: __SEH_prolog4 @ 0x0018F494, __SEH_epilog4 @ 0x0018F4CD
-    # (the entry's thread trampoline sub_00164C28 opens with
-    #  push 0x18; push <scopetable>; call 0x0018F494).
-    SEH_PROLOG = 0x0018F494  # __SEH_prolog4
-    SEH_EPILOG = 0x0018F4CD  # __SEH_epilog4
+    # The addresses are per release (config); USA:
+    SEH_PROLOG = SEH_PROLOG
+    SEH_EPILOG = SEH_EPILOG
 
     def _lift_call(self, insn, ops):
         # x86 'call' pushes return address then jumps.
         # With global esp, we push a dummy return address (0) then call.
         # The callee's 'ret' will pop it back off.
+        if insn.call_target == FTOL2_ADDR and self.func_start not in LEGACY_FTOL2_CALL_FUNCS:
+            # CRT _ftol2 converts the CALLER's x87 stack top (recomp bug #8);
+            # done inline so the value is popped from the right stack.
+            return ["{ int64_t _ft = (int64_t)fp_top(); fp_popp(); "
+                    "eax = (uint32_t)_ft; edx = (uint32_t)((uint64_t)_ft >> 32); } "
+                    "/* inline _ftol2 (bug #8) */"]
         if insn.call_target:
             name = self._call_target_name(insn.call_target)
             lines = [f"PUSH32(esp, 0); {name}(); /* call 0x{insn.call_target:08X} */"]
@@ -1279,6 +1307,10 @@ class Lifter:
             # For esp-relative targets (e.g. `call [esp+0xC]`), pushing first shifts esp
             # so MEM32(esp+X) would read the wrong slot (the just-pushed dummy). The
             # original x86 reads the target at the pre-push esp.
+            # An esp-relative target must be read before the dummy push moves
+            # esp; older functions read the others after it.
+            if self.func_start in LEGACY_ICALL_FUNCS and "esp" not in target:
+                return [f"PUSH32(esp, 0); RECOMP_ICALL_SAFE({target}, _icall_esp); /* indirect call */"]
             return [f"{{ uint32_t _icall_t = {target}; PUSH32(esp, 0); "
                     f"RECOMP_ICALL_SAFE(_icall_t, _icall_esp); }} /* indirect call */"]
         return ["/* call: no target */"]
@@ -1351,6 +1383,10 @@ class Lifter:
 
     def _lift_jmp(self, insn, ops):
         if insn.jump_target:
+            if insn.jump_target == FTOL2_ADDR and self.func_start in FTOL2_TAIL_INLINE_FUNCS:
+                return ["{ int64_t _ft = (int64_t)fp_top(); fp_popp(); "
+                        "eax = (uint32_t)_ft; edx = (uint32_t)((uint64_t)_ft >> 32); } "
+                        "esp += 4; return; /* inline _ftol2 tail (bug #8) */"]
             if self._is_external_target(insn.jump_target):
                 # Tail call - no return address push (reuses current frame's)
                 # Bridge ebp so the target function can inherit our frame pointer.
@@ -1863,8 +1899,13 @@ class Lifter:
             # From _fpu_cmp: less -> C0, equal -> C3, greater -> none.
             # (bug #9: this was a comment only — the following `test ah, X;
             # jcc` read whatever happened to be in eax.)
-            if (insn.op_str or "").strip() == "ax":
+            if (insn.op_str or "").strip() == "ax" and self.func_start in LEGACY_FNSTSW_AH_FUNCS:
                 return [f"SET_HI8(eax, (_fpu_cmp < 0 ? 0x01 : 0) | (_fpu_cmp == 0 ? 0x40 : 0)); /* fnstsw ax */"]
+            if (insn.op_str or "").strip() == "ax":
+                # The whole status word is stored to ax: AL takes the
+                # (masked, so clear) exception bits.
+                return ["eax = (eax & 0xFFFF0000u) | ((uint32_t)((_fpu_cmp < 0 ? 0x01 : 0) | "
+                        "(_fpu_cmp == 0 ? 0x40 : 0)) << 8); /* fnstsw ax */"]
             return [f"/* fnstsw {insn.op_str} - store FPU status word */"]
         if m == "fnstcw":
             # The control word is real state: the CRT's _ctrlfp reads it back
@@ -1913,6 +1954,29 @@ def lift_basic_block(lifter, bb, flag_state=None):
 
     while i < len(insns):
         curr = insns[i]
+
+        # cmpxchg [m], r + jne/je: equal -> store r (ZF=1); not equal -> the
+        # accumulator takes [m] (ZF=0). The plain lift drops both effects.
+        if (curr.mnemonic == "cmpxchg" and i + 1 < len(insns)
+                and insns[i + 1].mnemonic in ("jne", "jnz", "je", "jz")
+                and insns[i + 1].jump_target is not None
+                and len(curr.operands) == 2 and curr.operands[0].type == "mem"
+                and curr.operands[0].mem_size == 4
+                and curr.address not in CMPXCHG_UNFIXED):
+            dst = _fmt_operand_read(curr.operands[0])
+            src = _fmt_operand_read(curr.operands[1])
+            tgt = f"goto loc_{insns[i + 1].jump_target:08X};"
+            if insns[i + 1].mnemonic in ("jne", "jnz"):
+                stmts.append(f"/* cmpxchg {curr.op_str}: equal -> store {src}, ZF=1; else eax = {dst}, ZF=0. */")
+                stmts.append(f"if ({dst} == eax) {{ {dst} = {src}; }}")
+                stmts.append(f"else {{ eax = {dst}; {tgt} }} /* jne */")
+            else:
+                stmts.append(f"/* cmpxchg {curr.op_str}: equal -> store {src}, ZF=1; else eax = {dst}, ZF=0. */")
+                stmts.append(f"if ({dst} == eax) {{ {dst} = {src}; {tgt} }}")
+                stmts.append(f"else {{ eax = {dst}; }} /* je */")
+            last_flag_setter, last_flag_ops = None, []
+            i += 2
+            continue
 
         # Try cmp/test + jcc pattern first (2-instruction match)
         match = try_match_cmp_jcc(insns, i, lifter=lifter)

@@ -1,42 +1,25 @@
-"""
-Recompiler configuration - section mappings and constants.
+"""Recompiler configuration: selects the per-XBE data for one release.
+DOA3_REGION picks the release (default usa):"""
 
-Target: Dead or Alive 3 (Title ID 0x54430001), Retail, XDK 3911.
-Values from: py -3 tools/xbe_parser/xbe_parser.py ../doa3gamefiles/default.xbe
+import os
 
-NOTE: the size field below is the *raw* (on-disk) size so that
-va_to_file_offset never points past the end of the XBE file. BSS tails
-(virtual size > raw size, e.g. in .data) resolve to None and are treated
-as zero-initialized, which matches Xbox load behavior.
-"""
+REGION = os.environ.get("DOA3_REGION", "usa").lower()
 
-# Section virtual address -> file offset mappings
-SECTIONS = [
-    # (name, va_start, raw_size, raw_addr)
-    (".text",     0x00011000, 0x0019FDE0, 0x00001000),
-    ("D3D",       0x001B0DE0, 0x0000F36C, 0x001A1000),
-    ("D3DX",      0x001C35C0, 0x00002EC0, 0x001B1000),
-    ("XGRPH",     0x001C64A0, 0x000005FC, 0x001B4000),
-    ("DSOUND",    0x001C6AA0, 0x0001AEB4, 0x001B5000),
-    ("PSGSFD00",  0x001E1AA0, 0x00003190, 0x001D0000),
-    ("PSGSFD_I",  0x001E4C40, 0x000001F0, 0x001D4000),
-    ("PSGSFD_B",  0x001E4E40, 0x000006C0, 0x001D5000),
-    ("PSGSFD_P",  0x001E5500, 0x00000430, 0x001D6000),
-    ("XPP",       0x001E5940, 0x0000779C, 0x001D7000),
-    (".rdata",    0x001ED0E0, 0x0002C53C, 0x001DF000),
-    (".data",     0x00219640, 0x001A8450, 0x0020C000),
-    ("DOLBY",     0x00C27F60, 0x00006D84, 0x003B5000),
-    ("$$XTIMAGE", 0x00C2ED00, 0x00002800, 0x003BC000),
-]
+if REGION == "usa":
+    from .config_usa import *  # noqa: F401,F403
+elif REGION == "jpn":
+    from .config_jpn import *  # noqa: F401,F403
+else:
+    raise SystemExit(f"DOA3_REGION={REGION!r}: expected usa or jpn")
 
-TEXT_VA_START = 0x00011000
-TEXT_VA_END = 0x001B0DE0     # end of .text = start of D3D section
-RDATA_VA_START = 0x001ED0E0
-RDATA_VA_END = 0x00219640    # start of .data
-DATA_VA_START = 0x00219640
-DATA_VA_END = 0x00C31500     # base (0x10000) + image size (0xC21500)
-KERNEL_THUNK_ADDR = 0x001ED0E0
-ENTRY_POINT = 0x001651A5
+_TOOLS = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_SUFFIX = "" if REGION == "usa" else "_" + REGION
+
+DISASM_OUTPUT_DIR = os.path.join(_TOOLS, "disasm", "output" + _SUFFIX)
+FUNC_ID_OUTPUT_DIR = os.path.join(_TOOLS, "func_id", "output" + _SUFFIX)
+ABI_OUTPUT_DIR = os.path.join(_TOOLS, "abi_analysis", "output" + _SUFFIX)
+RECOMP_OUTPUT_DIR = os.path.join(_TOOLS, "recomp", "output" + _SUFFIX)
+GEN_DIR = os.path.join(os.path.dirname(_TOOLS), "src", "game", "recomp", "gen" + _SUFFIX)
 
 
 def va_to_file_offset(va):

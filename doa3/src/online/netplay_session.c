@@ -18,7 +18,7 @@
 #include "kernel/kernel.h"
 #include "xbox_det.h"
 
-void sub_000BB270(void);                       /* rebuilds the per-port button maps */
+void doa3_rebuild_button_maps(void);           /* recomp_manual.c: the per-port button maps */
 void doa3_netplay_force_pads(uint32_t mask);   /* recomp_manual.c */
 void mcpx_apu_det_begin(uint64_t xgscnt_base); /* apu_core.c: chip stepped per frame */
 uint64_t mcpx_apu_xgscnt_now(void);
@@ -306,7 +306,7 @@ static void rebuild_button_maps(void)
 {
     uint32_t sv[7] = { g_eax, g_ecx, g_edx, g_ebx, g_esi, g_edi, g_esp };
     PUSH32(g_esp, 0);
-    sub_000BB270();
+    doa3_rebuild_button_maps();
     g_eax = sv[0]; g_ecx = sv[1]; g_edx = sv[2];
     g_ebx = sv[3]; g_esi = sv[4]; g_edi = sv[5]; g_esp = sv[6];
 }

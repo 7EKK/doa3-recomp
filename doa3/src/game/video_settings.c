@@ -8,6 +8,7 @@
 #include <stddef.h>
 
 #include "video_settings.h"
+#include "../kernel/doa3_guest.h"
 
 extern HWND d3d8_GetHWND(void);
 extern ptrdiff_t g_xbox_mem_offset;
@@ -20,7 +21,7 @@ int video_get_window_mode(void) { return g_window_mode; }
 int video_get_aspect(void)      { return g_aspect; }
 int video_get_scale(void)       { return g_scale; }
 
-static const char *video_ini_path(void)
+const char *doa3_settings_ini_path(void)
 {
     static char path[MAX_PATH];
     char *slash;
@@ -37,7 +38,7 @@ static const char *video_ini_path(void)
 
 int video_settings_load(void)
 {
-    const char *p = video_ini_path();
+    const char *p = doa3_settings_ini_path();
     int wm = (int)GetPrivateProfileIntA("Video", "WindowMode", VIDEO_BORDERLESS, p);
     int ar = (int)GetPrivateProfileIntA("Video", "Widescreen", VIDEO_ASPECT_16_9, p);
     int sc = (int)GetPrivateProfileIntA("Video", "InternalResolution", 3, p);
@@ -49,7 +50,7 @@ int video_settings_load(void)
 
 int video_settings_save(void)
 {
-    const char *p = video_ini_path();
+    const char *p = doa3_settings_ini_path();
     /* WindowMode: 0 = windowed, 1 = borderless fullscreen.
      * Widescreen: 0 = 4:3, 1 = 16:9.
      * InternalResolution: 1 = 480 lines, 2 = 960, 3 = 1440. */
@@ -101,7 +102,8 @@ void video_set_aspect(int aspect)
  * game's own widescreen state in line with the new aspect.
  *
  * sub_001539C0 queries XC_VIDEO once and caches the result in three places
- * the rest of the game reads from then on: its widescreen flag 0x90F544
+ * the rest of the game reads from then on (USA addresses; per release in
+ * doa3_guest.c): its widescreen flag 0x90F544
  * bit 0 (read by the per-frame projection code), the present-parameter
  * flags 0x90F4D0 (D3DPRESENTFLAG_WIDESCREEN = 0x10) and the raw video flags
  * 0x90F4E0 bit 0. Before that init has run (present width 0x90F4A8 not yet
@@ -110,10 +112,10 @@ void video_set_aspect(int aspect)
 void video_sync_guest_widescreen(void)
 {
     volatile uint8_t *m = (volatile uint8_t *)(uintptr_t)g_xbox_mem_offset;
-    volatile uint32_t *pp_w  = (volatile uint32_t *)(m + 0x90F4A8);
-    volatile uint32_t *pp_fl = (volatile uint32_t *)(m + 0x90F4D0);
-    volatile uint32_t *vflag = (volatile uint32_t *)(m + 0x90F4E0);
-    volatile uint32_t *ws    = (volatile uint32_t *)(m + 0x90F544);
+    volatile uint32_t *pp_w  = (volatile uint32_t *)(m + g_guest->video_pp_width);
+    volatile uint32_t *pp_fl = (volatile uint32_t *)(m + g_guest->video_pp_flags);
+    volatile uint32_t *vflag = (volatile uint32_t *)(m + g_guest->video_flags);
+    volatile uint32_t *ws    = (volatile uint32_t *)(m + g_guest->video_widescreen);
     int on = (g_aspect == VIDEO_ASPECT_16_9);
     if (!g_xbox_mem_offset || *pp_w != 0x2D0u) return;
     if (on) { *ws |= 1u;  *pp_fl |= 0x10u;  *vflag |= 1u; }

@@ -12,6 +12,7 @@
  */
 
 #include <windows.h>
+#include <shlobj.h>      /* SHGetFolderPathW: the release's save folder */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,16 +22,20 @@
 #include "../kernel/kernel.h"
 #include "../kernel/xbox_memory_layout.h"
 #include "../kernel/xbox_fiber.h"
+#include "../kernel/doa3_guest.h"
 #include "../d3d/d3d8_xbox.h"
 #include "../audio/dsound_xbox.h"
-#include "recomp/gen/recomp_funcs.h"
+#include "recomp_funcs.h"            /* this release's generated tree */
 #include "recomp/recomp_dispatch.h"   /* recomp_lookup for the CRT initializers */
 #include "ui/doa3_ui.h"
+#include "ui/doa3_setup.h"
+#include "xiso_extract.h"
 #include "video_settings.h"
+#include "log_settings.h"
 
-#define DOA3_ENTRY_POINT   0x001651A5
-#define DOA3_XBE_PATH      "../doa3gamefiles/default.xbe"
-#define DOA3_GAME_DIR      "../doa3gamefiles"
+/* Game files live in an "assets" folder next to the exe; the working
+ * directory is set to the exe's folder at startup. */
+#define DOA3_XBE_PATH      "assets/default.xbe"
 
 /* Host window + D3D8->D3D11 device (mirrors burnout3's graphics init). The NV2A
  * pgraph->D3D11 translator renders through this device via xbox_GetD3DDevice(). */
@@ -45,22 +50,28 @@ static LRESULT CALLBACK doa3_wndproc(HWND h, UINT m, WPARAM w, LPARAM l)
     if (m == WM_DESTROY) { PostQuitMessage(0); return 0; }
     /* The Esc overlay gets first refusal on input: it opens/closes itself and,
      * while visible, keeps keyboard and mouse out of the game. */
+    if (doa3_setup_wndproc(h, m, w, l)) return 0;   /* first-run setup screen */
     if (doa3_ui_wndproc(h, m, w, l)) return 0;
     return DefWindowProcA(h, m, w, l);
 }
 
 static HWND doa3_create_window(void)
 {
-    WNDCLASSA wc; RECT r = { 0, 0, 640, 480 };
+    WNDCLASSEXA wc; RECT r = { 0, 0, 640, 480 };
     memset(&wc, 0, sizeof(wc));
+    wc.cbSize = sizeof(wc);
     wc.lpfnWndProc = doa3_wndproc;
     wc.hInstance = GetModuleHandleA(NULL);
     wc.lpszClassName = "DOA3Window";
     wc.hCursor = LoadCursorA(NULL, IDC_ARROW);
+    wc.hIcon = (HICON)LoadImageA(wc.hInstance, MAKEINTRESOURCEA(1), IMAGE_ICON,
+                                 GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0);
+    wc.hIconSm = (HICON)LoadImageA(wc.hInstance, MAKEINTRESOURCEA(1), IMAGE_ICON,
+                                   GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0);
     /* Black until the first frame: a borderless window covers the whole
      * monitor, and an unpainted one shows white blocks during boot. */
     wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
-    RegisterClassA(&wc);
+    RegisterClassExA(&wc);
     AdjustWindowRect(&r, WS_OVERLAPPEDWINDOW, FALSE);
     HWND h = CreateWindowExA(0, "DOA3Window", "Dead or Alive 3",
                              WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
@@ -85,7 +96,8 @@ static int doa3_init_graphics(void)
         netplay_init();
     }
     video_guest_target_size(video_get_aspect(), &gw, &gh);
-    g_hwnd = doa3_create_window();
+    if (!g_hwnd)   /* the first-run setup screen may already have made it */
+        g_hwnd = doa3_create_window();
     if (!g_hwnd) { fprintf(stderr, "WARNING: window creation failed\n"); }
 
     g_d3d8 = xbox_Direct3DCreate8(0);
@@ -213,47 +225,7 @@ static void doa3_watchdog_start(void)
 void doa3_present_frame(void)
 {
     InterlockedIncrement(&g_doa3_heartbeat);
-    {   /* DOA3 DIAG: render command list occupancy.
-         * list 1 = 0x00A1F388 .. write ptr [0x00B1F390]  (1 MB)
-         * list 2 = 0x0099F378 .. write ptr [0x00A1F378]  (1 MB)
-         * Both write-pointer globals sit immediately above their buffer, so
-         * an overflow destroys the pointer itself and everything above it.
-         * sub_00158BE0 appends without any bound check; the only reset is
-         * sub_00158B60, once per frame from sub_000B8855. */
-        extern volatile int g_doa3_post_movie;
-        static DWORD s_next = 0;
-        static uint32_t s_hi1 = 0, s_hi2 = 0, s_over = 0, s_frames = 0;
-        uint32_t w1 = MEM32(0x00B1F390u), w2 = MEM32(0x00A1F378u);
-        uint32_t u1 = (w1 >= 0x00A1F388u && w1 <= 0x00B1F388u) ? w1 - 0x00A1F388u : 0xFFFFFFFFu;
-        uint32_t u2 = (w2 >= 0x0099F378u && w2 <= 0x00A1F378u) ? w2 - 0x0099F378u : 0xFFFFFFFFu;
-        s_frames++;
-        if (u1 == 0xFFFFFFFFu || u2 == 0xFFFFFFFFu) s_over++;
-        else { if (u1 > s_hi1) s_hi1 = u1; if (u2 > s_hi2) s_hi2 = u2; }
-        if (g_doa3_post_movie && GetTickCount() >= s_next) {
-            s_next = GetTickCount() + 2000;
-            fprintf(stderr, "  [LIST] frames=%u list1=%u/1048576 (hi %u) list2=%u/1048576 (hi %u) bad_ptr_frames=%u w1=%08X w2=%08X\n",
-                    s_frames, (u1 == 0xFFFFFFFFu) ? 0 : u1, s_hi1,
-                    (u2 == 0xFFFFFFFFu) ? 0 : u2, s_hi2, s_over, w1, w2);
-            fflush(stderr);
-            s_frames = 0;
-        }
-    }
-    {   /* DOA3 DIAG: which surface the guest device is rendering into at
-         * present time (device+0x40C), sampled every ~2 s post-movie. */
-        extern volatile int g_doa3_post_movie;
-        static DWORD s_next = 0;
-        if (g_doa3_post_movie && GetTickCount() >= s_next) {
-            s_next = GetTickCount() + 2000;
-            fprintf(stderr, "[RT@PRESENT] dev40C=%08X dev5A0[0]=%g\n", MEM32(0x1C0C0Cu), MEMF(0x1C0DA0u));
-        }
-    }
-    {   /* DOA3 DIAG: APU state every ~2 s (audio bring-up) */
-        extern void apu_debug_stats_line(void);
-        static DWORD s_next = 0;
-        { extern void doa3_apu_deliver_irq(void); doa3_apu_deliver_irq(); }
-        if (GetTickCount() >= s_next) { s_next = GetTickCount() + 2000; apu_debug_stats_line();
-             }
-    }
+    { extern void doa3_apu_deliver_irq(void); doa3_apu_deliver_irq(); }
     if (getenv("DOA3_NO_PRESENT")) return;   /* isolation: skip pump + present entirely */
     MSG msg;
     while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
@@ -746,59 +718,6 @@ void doa3_ebxwp_resume(void)
 {
     if (g_ebxwp_paused) { g_ebxwp_paused = 0; doa3_ebxwp_arm(); }
 }
-/* Same, plus esp drift: in this recomp model a callee pops only the dummy
- * return slot, so esp must come back exactly where it was before the
- * PUSH32(esp, 0) -- except for callee-clean (ret N) functions, which show a
- * constant positive delta at every site. Deduped per (caller, callee). */
-void doa3_cs_report2(const char *caller, const char *callee, uint32_t site, uint32_t before, uint32_t esp_before)
-{
-    static struct { const char *a, *b; uint32_t site; int n; } seen[512];
-    static int nseen = 0;
-    int i;
-    for (i = 0; i < nseen; i++)
-        if (seen[i].a == caller && seen[i].b == callee && seen[i].site == site) break;
-    if (i == nseen) { if (nseen >= 512) return; seen[nseen].a = caller; seen[nseen].b = callee; seen[nseen].site = site; seen[nseen].n = 0; nseen++; }
-    if (seen[i].n >= 3) return;
-    seen[i].n++;
-    fprintf(stderr, "[CSCHK2] %s: %s (site 0x%08X) ebx %08X -> %08X, esp %08X -> %08X (d=%+d) fiber=%d\n",
-            caller, callee, site, before, g_ebx, esp_before, g_esp, (int)(g_esp - esp_before), xbox_fiber_current());
-    fflush(stderr);
-}
-/* Callee-saved ebx/esi/edi + esp drift, deduped per (caller, callee, site).
- * Emitted into the vertex-block walker sub_00157700 and its callees. */
-void doa3_cs_report3(const char *caller, const char *callee, uint32_t site,
-                     uint32_t b, uint32_t sp, uint32_t si, uint32_t di)
-{
-    /* Retired: the register-drift report this produced is no longer read,
-     * and its 512-entry linear search ran on every drifting call (1-1.7%
-     * of the game thread in fights). The generated call sites stay. */
-    (void)caller; (void)callee; (void)site; (void)b; (void)sp; (void)si; (void)di;
-    return;
-    static struct { const char *a, *b; uint32_t site; int n; } seen[512];
-    static int nseen = 0;
-    int i;
-    for (i = 0; i < nseen; i++)
-        if (seen[i].a == caller && seen[i].b == callee && seen[i].site == site) break;
-    if (i == nseen) { if (nseen >= 512) return; seen[nseen].a = caller; seen[nseen].b = callee; seen[nseen].site = site; seen[nseen].n = 0; nseen++; }
-    if (seen[i].n >= 3) return;
-    seen[i].n++;
-    fprintf(stderr, "[CSCHK3] %s: %s (site 0x%08X)%s%s%s%s ebx %08X->%08X esi %08X->%08X edi %08X->%08X esp %08X->%08X (d=%+d) fiber=%d\n",
-            caller, callee, site,
-            (g_ebx != b) ? " EBX" : "", (g_esi != si) ? " ESI" : "", (g_edi != di) ? " EDI" : "", (g_esp != sp) ? " ESP" : "",
-            b, g_ebx, si, g_esi, di, g_edi, sp, g_esp, (int)(g_esp - sp), xbox_fiber_current());
-    fflush(stderr);
-}
-/* Call-site callee-saved check emitted into sub_00084340_gen and
- * sub_00021F70_gen: reports a callee that returned with ebx changed. */
-void doa3_cs_report(const char *caller, const char *callee, uint32_t site, uint32_t before)
-{
-    static int n = 0;
-    if (n >= 60) return;
-    n++;
-    fprintf(stderr, "[CSCHK] %s: %s (site 0x%08X) returned with ebx %08X -> %08X esp=%08X fiber=%d\n",
-            caller, callee, site, before, g_ebx, g_esp, xbox_fiber_current());
-    fflush(stderr);
-}
 /* Walk the guest thread's native frames from an exception context. */
 static void doa3_ctx_backtrace(const CONTEXT *src, int max)
 {
@@ -1022,39 +941,7 @@ static LONG WINAPI crash_veh(PEXCEPTION_POINTERS info)
      * positive offset land just beyond base+4GB and still need the skip treatment. */
     int in_region = (fault >= base && fault < base + 0x100010000ull);
 
-    /* Log the first 60 faults, then every 1,000,000th (to reveal a spin's
-     * repeated faulting access without flooding). */
     g_fault_logged++;
-    {   /* First wild accesses: outside guest RAM and outside the GPU MMIO
-         * aperture, i.e. a genuinely corrupted pointer rather than the normal
-         * emulated-register traffic. Report the guest block of sub_00050380
-         * that was executing, so the bad value can be traced to a statement. */
-        uint32_t _xv = (uint32_t)(fault - base);
-        extern uint32_t g_blk50380;
-        static int s_wild = 0;
-        if (_xv >= 0x08000000u && (_xv & 0xFF000000u) != 0xFD000000u &&
-            g_blk50380 != 0 && s_wild < 12) {
-            s_wild++;
-            fprintf(stderr, "[WILD] #%d xbva=0x%08X rip=0x%llX blk50380=0x000%05X "
-                            "eax=%08X ecx=%08X edx=%08X ebx=%08X esi=%08X edi=%08X\n",
-                    s_wild, _xv, (unsigned long long)info->ContextRecord->Rip,
-                    g_blk50380, g_eax, g_ecx, g_edx, g_ebx, g_esi, g_edi);
-            { extern void doa3_vbw_dump(void); if (s_wild <= 6) doa3_vbw_dump(); }
-            fflush(stderr);
-        }
-    }
-    if (g_fault_logged <= 60 || (g_fault_logged % 1000000ull) == 0) {
-        fprintf(stderr,
-            "[FAULT] #%llu %s 0x%llX (xbva 0x%08X) rip=0x%llX  eax=%08X ecx=%08X edx=%08X "
-            "ebx=%08X esi=%08X edi=%08X esp=%08X\n",
-            (unsigned long long)g_fault_logged,
-            is_write ? "write" : "read",
-            (unsigned long long)fault,
-            (uint32_t)(fault - base),
-            (unsigned long long)info->ContextRecord->Rip,
-            g_eax, g_ecx, g_edx, g_ebx, g_esi, g_edi, g_esp);
-        fflush(stderr);
-    }
 
     /* NV2A GPU / hardware I/O address space (Xbox VA >= 0xF0000000):
      *   0xFD000000-0xFDFFFFFF  GPU MMIO registers -> NV2A register state machine
@@ -1289,7 +1176,6 @@ static LONG WINAPI doa3_unhandled(PEXCEPTION_POINTERS info)
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
-unsigned g_e1660_n, g_e1660_lo = 0xFFFFFFFFu, g_e1660_hi = 0xFFFFFFFFu, g_e1660_mask[8];
 
 int main(int argc, char **argv)
 {
@@ -1301,52 +1187,28 @@ int main(int argc, char **argv)
         _set_FMA3_enable(0);
     }
     doa3_watchdog_start();   /* localise non-faulting hangs (see doa3_watchdog) */
-    /* Find the project root so relative asset paths work from any build
-     * configuration directory. */
+    /* Run from the exe's folder, whatever the launcher's working directory:
+     * the assets folder, the log and the ini files all sit next to the exe. */
+#ifdef DOA3_REGION_JPN
+    g_guest = &g_guest_jpn;      /* guest addresses the runtime relies on */
+#endif
+    WCHAR assets_dir[MAX_PATH] = L"assets";
     {
-        char exedir[MAX_PATH];
-        DWORD n = GetModuleFileNameA(NULL, exedir, MAX_PATH);
+        WCHAR exedir[MAX_PATH];
+        DWORD n = GetModuleFileNameW(NULL, exedir, MAX_PATH);
         if (n > 0 && n < MAX_PATH) {
-            char *slash = strrchr(exedir, 0x5c);
+            WCHAR *slash = wcsrchr(exedir, L'\\');
             if (slash) {
-                char asset[MAX_PATH];
                 *slash = 0;
-                for (int depth = 0; depth < 4; depth++) {
-                    snprintf(asset, sizeof(asset),
-                             "%s\\..\\doa3gamefiles\\default.xbe", exedir);
-                    if (GetFileAttributesA(asset) != INVALID_FILE_ATTRIBUTES) {
-                        SetCurrentDirectoryA(exedir);
-                        break;
-                    }
-                    slash = strrchr(exedir, 0x5c);
-                    if (!slash)
-                        break;
-                    *slash = 0;
-                }
+                SetCurrentDirectoryW(exedir);
+                swprintf_s(assets_dir, MAX_PATH, L"%s\\assets", exedir);
             }
         }
     }
     setvbuf(stdout, NULL, _IONBF, 0);
-    /* Diagnostics go to a file whenever stderr would otherwise reach a
-     * console.
-     *
-     * This build logs heavily and stderr is unbuffered, so every line is a
-     * synchronous console write. Launched from a shell that redirects
-     * stderr that costs nothing, but double-clicked -- where the process
-     * owns a real console -- it starves the guest badly enough that boot
-     * never completes and the window just stays blank. Release builds have
-     * no console at all and already needed this.
-     *
-     * GetConsoleMode only succeeds on a console handle, so a redirected or
-     * piped stderr is left exactly as the caller set it. */
-    {
-        HANDLE herr = GetStdHandle(STD_ERROR_HANDLE);
-        DWORD cmode;
-        if (herr == NULL || herr == INVALID_HANDLE_VALUE ||
-            GetConsoleMode(herr, &cmode))
-            freopen("doa3_log.txt", "w", stderr);
-    }
-    setvbuf(stderr, NULL, _IONBF, 0);
+    /* stderr -> doa3_log.txt when logging is on in the Esc menu, NUL when
+     * off (the default). See log_settings.h. */
+    doa3_log_init();
 
     atexit(doa3_atexit);
     SetUnhandledExceptionFilter(doa3_unhandled);
@@ -1370,6 +1232,19 @@ int main(int argc, char **argv)
                     &g_diag_main_thread, 0, FALSE, DUPLICATE_SAME_ACCESS);
     CreateThread(NULL, 0, diag_sampler, NULL, 0, NULL);
 
+    /* First run (or a damaged install): ask for the disc image and extract it
+     * into assets before anything reads from there. */
+    if (!xiso_assets_ready(assets_dir)) {
+        fprintf(stderr, "[SETUP] game files missing from %S, showing setup screen\n", assets_dir);
+        video_settings_load();
+        g_hwnd = doa3_create_window();
+        if (!doa3_setup_run(g_hwnd, assets_dir)) {
+            fprintf(stderr, "[EXIT] setup closed without installing the game files\n");
+            return 0;
+        }
+        fprintf(stderr, "[SETUP] game files installed\n");
+    }
+
     if (!load_xbe(DOA3_XBE_PATH, &xbe_data, &xbe_size)) {
         {
             char cwd[MAX_PATH] = {0};
@@ -1377,7 +1252,7 @@ int main(int argc, char **argv)
             char msg[512];
             snprintf(msg, sizeof(msg),
                      "Could not load %s\n(working directory: %s)\n\n"
-                     "Expected the game files in a doa3gamefiles folder next to the doa3 project folder.",
+                     "Expected the game files in the assets folder next to DOA3.exe.",
                      DOA3_XBE_PATH, cwd);
             fprintf(stderr, "FATAL: %s\n", msg);
             MessageBoxA(NULL, msg, "DOA3 recomp - startup error", 0x10);
@@ -1393,7 +1268,18 @@ int main(int argc, char **argv)
            (unsigned long long)(uintptr_t)xbox_GetMemoryOffset());
 
     xbox_kernel_init();
-    xbox_path_init(DOA3_GAME_DIR, NULL);
+#ifdef DOA3_REGION_JPN
+    {   /* Japan saves apart from USA's (%LOCALAPPDATA%\DeadOrAlive3_JPN). */
+        WCHAR base[MAX_PATH]; char save_dir[MAX_PATH * 3];
+        if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, base)) &&
+            WideCharToMultiByte(CP_UTF8, 0, base, -1, save_dir, MAX_PATH * 2, NULL, NULL) > 0) {
+            strcat_s(save_dir, sizeof save_dir, "\\DeadOrAlive3_JPN");
+            xbox_path_init(NULL, save_dir);
+        } else xbox_path_init(NULL, NULL);
+    }
+#else
+    xbox_path_init(NULL, NULL);   /* D:\ -> <exe folder>\assets */
+#endif
     xbox_kernel_bridge_init();
 
     /* Pre-initialize CRT bootstrap locks (replicates _mtinitlocks @ 0x00191ACA).
@@ -1408,10 +1294,10 @@ int main(int argc, char **argv)
      * the ptr just needs to be non-NULL; we use the CRT's own CS buffer at
      * 0xBF4CF0 (stride 0x1C), exactly as the original _mtinitlocks does. */
     {
-        uint32_t cs_addr = 0xBF4CF0;   /* DOA3 CS buffer array (BSS) */
+        uint32_t cs_addr = g_guest->crt_lock_cs;   /* DOA3 CS buffer array (BSS) */
         int locks = 0;
         for (int i = 0; i < 36; i++) {
-            uint32_t ptr_va  = 0x3C0FB8 + i * 8;
+            uint32_t ptr_va  = g_guest->crt_lock_table + i * 8;
             uint32_t flag_va = ptr_va + 4;
             if (MEM32(flag_va) == 1) {
                 MEM32(ptr_va) = cs_addr;
@@ -1528,9 +1414,9 @@ int main(int argc, char **argv)
      * The bodies live in recomp_ctors.c: they are only ever reached through
      * these tables, so direct-call function detection never found them. */
     {
-        static const struct { uint32_t lo, hi; const char *what; } s_ini[] = {
-            { 0x00219640u, 0x0021964Cu, "C initializers"   },  /* __xi_a .. __xi_z */
-            { 0x00219650u, 0x002196F4u, "C++ constructors" },  /* __xc_a .. __xc_z */
+        const struct { uint32_t lo, hi; const char *what; } s_ini[] = {
+            { g_guest->crt_xi_a, g_guest->crt_xi_z, "C initializers"   },  /* __xi_a .. __xi_z */
+            { g_guest->crt_xc_a, g_guest->crt_xc_z, "C++ constructors" },  /* __xc_a .. __xc_z */
         };
         /* DOA3_CRTMAX=N limits how many initializers run (bisecting a bad
          * one); DOA3_CRTMAX=0 disables them entirely. */
@@ -1576,22 +1462,14 @@ int main(int argc, char **argv)
             fprintf(stderr, "  CRT init: %s: %u run, %u missing\n",
                     s_ini[t].what, ran, miss);
         }
-        {   extern unsigned g_e1660_n, g_e1660_lo, g_e1660_hi, g_e1660_mask[8];
-            int _m;
-            fprintf(stderr, "  [CTOR370C48] constructed=%u of 175 (idx %u..%u) mask:",
-                    g_e1660_n, g_e1660_lo, g_e1660_hi);
-            for (_m = 0; _m < 6; _m++)
-                fprintf(stderr, " %08X", g_e1660_mask[_m]);
-            fprintf(stderr, "\n");
-        }
         fflush(stderr);
     }
 
-    printf("Init complete. Entry=0x%08X  ESP=0x%08X\n", DOA3_ENTRY_POINT, g_esp);
+    printf("Init complete. Entry=0x%08X  ESP=0x%08X\n", g_guest->entry_point, g_esp);
     printf("\n--- Calling xbe_entry_point() ---\n");
     fflush(stdout);
 
-    if (getenv("DOA3_WATCHARR")) {
+    if (getenv("DOA3_WATCHARR") && g_guest == &g_guest_usa) {   /* USA addresses */
         extern uint32_t g_watch_arr_base, g_watch_arr_stride, g_watch_arr_n;
         /* wxCi cache registry, z:\ slot (0xC057C0 + 0x30*2 = 0xC05820):
          * +0x24 file count, +0x28 list head. Only one file ever registers,

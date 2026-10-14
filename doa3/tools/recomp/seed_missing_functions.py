@@ -19,17 +19,21 @@ Workflow (run from the doa3/ root):
   5. cmake -S . -B build && cmake --build build --config Release
 
 Re-apply after any fresh `tools.disasm` run (which overwrites functions.json).
+
+The argument may instead be a generated-code folder: the unresolved symbols
+are then the call targets only recomp_stubs.c defines, so no build is needed.
+Repeat steps 2-4 until it adds nothing.
 """
+import glob
 import json
+import re
 import bisect
 import os
 import sys
 
 from . import config
 
-FUNCTIONS_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "disasm", "output", "functions.json")
+FUNCTIONS_PATH = os.path.join(config.DISASM_OUTPUT_DIR, "functions.json")
 
 
 def section_of(va):
@@ -39,9 +43,21 @@ def section_of(va):
     return "?"
 
 
+def stubbed_targets(gen_dir):
+    """sub_* names the generated code uses but only recomp_stubs.c defines."""
+    defined, used = set(), set()
+    for path in glob.glob(os.path.join(gen_dir, "*.c")):
+        if os.path.basename(path) == "recomp_stubs.c":
+            continue
+        text = open(path, encoding="utf-8").read()
+        defined |= set(re.findall(r"^(?:static )?void sub_([0-9A-F]{8})\s*\(", text, re.M))
+        used |= set(re.findall(r"\bsub_([0-9A-F]{8})\b", text))
+    return used - defined
+
+
 def main():
     if len(sys.argv) < 2:
-        print("usage: python -m tools.recomp.seed_missing_functions <unresolved.txt>",
+        print("usage: python -m tools.recomp.seed_missing_functions <unresolved.txt | gen dir>",
               file=sys.stderr)
         sys.exit(1)
 
@@ -56,10 +72,13 @@ def main():
         bps.add(va)
         bps.add(va + size)
 
-    unres = sorted({
-        int(line.strip().replace("sub_", ""), 16)
-        for line in open(sys.argv[1]) if line.strip()
-    })
+    if os.path.isdir(sys.argv[1]):
+        unres = sorted(int(n, 16) for n in stubbed_targets(sys.argv[1]))
+    else:
+        unres = sorted({
+            int(line.strip().replace("sub_", ""), 16)
+            for line in open(sys.argv[1]) if line.strip()
+        })
     for a in unres:
         bps.add(a)
     bp = sorted(bps)

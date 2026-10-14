@@ -11,11 +11,21 @@ For each function:
 Produces compilable C code using recomp_types.h macros.
 """
 
+import glob
 import json
 import os
 import re
 
-from .config import va_to_file_offset, is_code_address, TEXT_VA_START, TEXT_VA_END
+from .config import (va_to_file_offset, is_code_address, TEXT_VA_START, TEXT_VA_END,
+                     FALLTHROUGH_RANGES, FALLTHROUGH_KEEP_XDK, BUG14_LATCH_FUNCS, CLOBBERED_FLAGS_UNFIXED, DEFERRED_CMP_UNFIXED, ENTRY_FLAGS_UNFIXED, SHARED_JCC_UNFIXED,
+                     SHARED_JCC_ARITH_UNFIXED,
+                     FALLTHROUGH_EXTRA, FALLTHROUGH_SKIP, FALLTHROUGH_SYNC, FALLTHROUGH_RET,
+                     CARRIER_HOLD_FUNCS, CARRIER_INHERIT_FUNCS, CARRIER_SPLIT_PROLOGUE,
+                     CARRIER_SPLIT_EPILOGUE,
+                     LEGACY_NO_JT_EXTEND_FUNCS, BODY_SUFFIX, IF0_BODIES, NOT_EMITTED,
+                     DISPATCH_SEARCH_LIMIT, DISPATCH_EXCLUDE, CRT_INIT_FUNCS,
+                     SEED_BODIES, HAND_EDITS, FTOL2_ADDR, LEGACY_FTOL2_CALL_FUNCS,
+                     FTOL2_TAIL_INLINE_FUNCS)
 from .disasm import Disassembler
 from .lifter import Lifter, lift_basic_block
 
@@ -91,6 +101,676 @@ def _fixup_icall_esp_save(lines):
     return result
 
 
+# ── Post-lift fixes ─────────────────────────────────────────────────────
+# These used to be scripts run over the generated tree after every
+# regeneration (tools/recomp/fix_*.py). They work on a function's emitted
+# lines, with the same rules, so a regeneration reproduces the tree.
+
+def _orig_end(lines):
+    for l in lines:
+        m = re.search(r'Original: 0x([0-9A-Fa-f]+) - 0x([0-9A-Fa-f]+)', l)
+        if m:
+            return int(m.group(2), 16)
+    return None
+
+
+def fix_carrier(lines, start):
+    """ebp is callee-saved, but between generated functions it travels in the
+    global g_seh_ebp, which a callee may leave pointing at its own frame. In
+    the listed functions, keep the caller's frame: across every call (HOLD),
+    from entry to the hand-off (INHERIT), on a split prologue's push and a
+    split epilogue's ret."""
+    if start not in (CARRIER_HOLD_FUNCS | CARRIER_INHERIT_FUNCS
+                     | CARRIER_SPLIT_PROLOGUE | CARRIER_SPLIT_EPILOGUE):
+        return lines
+    text = "\n".join(lines).split("\n")
+    body = text.index("{")
+    if start in CARRIER_HOLD_FUNCS:
+        out = text[:body + 1]
+        for l in text[body + 1:]:
+            if re.search(r'PUSH32\(esp, 0\); (sub_\w+\(\);|RECOMP_ICALL_SAFE\()', l):
+                ind = l[:len(l) - len(l.lstrip())]
+                out += [f"{ind}{{ uint32_t _seh_hold = g_seh_ebp; /* DOA3: ebp survives the call */",
+                        l, f"{ind}g_seh_ebp = _seh_hold; }}"]
+            else:
+                out.append(l)
+        text = out
+    if start in CARRIER_INHERIT_FUNCS:
+        if not any(l.strip().startswith("uint32_t ebp") for l in text[body:]):
+            text.insert(body + 1, "    uint32_t ebp;")
+            label = next(k for k in range(body, len(text)) if re.match(r'^loc_\w+: ;', text[k]))
+            text.insert(label, "    ebp = g_seh_ebp; /* DOA3: carry the caller's frame to the hand-off */")
+    if start in CARRIER_SPLIT_PROLOGUE:
+        k = next(k for k in range(body, len(text)) if text[k].strip() == "PUSH32(esp, ebp);")
+        text.insert(k, "    ebp = g_seh_ebp; /* DOA3: push saves the caller's frame */")
+    if start in CARRIER_SPLIT_EPILOGUE:
+        out = []
+        for l in text:
+            if re.match(r'^\s*esp \+= \d+; return;', l):
+                out.append("    g_seh_ebp = ebp; /* DOA3: hand back the frame popped above */")
+            out.append(l)
+        text = out
+    return text
+
+
+def fix_fallthrough(lines, start, end, func_db):
+    """A body whose last statement does not end it runs on into the function
+    at its end (the detector split the code there): emit that as a tail
+    call. Game .text and D3DX, plus the XDK sites known to need it."""
+    if start in FALLTHROUGH_SKIP:
+        return lines
+    if start in FALLTHROUGH_RET:
+        close = max(k for k, l in enumerate(lines) if l == "}")
+        return (lines[:close]
+                + [f"    esp += {FALLTHROUGH_RET[start]}; return; /* DOA3: fall-through into a lone ret */"]
+                + lines[close:])
+    if start in FALLTHROUGH_EXTRA:
+        tgt, sync = FALLTHROUGH_EXTRA[start]
+        close = max(k for k, l in enumerate(lines) if l == "}")
+        return (lines[:close]
+                + [f"    {'g_seh_ebp = ebp; ' if sync else ''}sub_{tgt:08X}(); return; "
+                   f"/* DOA3: restored dropped fall-through to sub_{tgt:08X} */"]
+                + lines[close:])
+    if not (any(lo <= start < hi for lo, hi in FALLTHROUGH_RANGES)
+            or start in FALLTHROUGH_KEEP_XDK):
+        return lines
+    end = _orig_end(lines) or end
+    if end not in func_db:
+        return lines
+    close = max(k for k, l in enumerate(lines) if l == "}")
+    has_ebp = any("uint32_t ebp;" in l for l in lines[:close])
+    last = ""
+    for b in reversed(lines[:close]):
+        s = b.strip()
+        if (not s or s.startswith("/*") or s.startswith("*") or s.endswith(": ;")
+                or s in ("{", "};") or s.startswith("#") or s.startswith("loc_")
+                or s.startswith("uint") or s.startswith("int ")):
+            continue
+        last = s
+        break
+    term = (("return" in last and not last.startswith("if ")) or
+            last.startswith("goto ") or "__debugbreak" in last or last.endswith("break;"))
+    if last and term:
+        return lines
+    tgt = f"sub_{end:08X}"
+    sync = "g_seh_ebp = ebp; " if FALLTHROUGH_SYNC.get(start, has_ebp) else ""
+    return (lines[:close]
+            + [f"    {sync}{tgt}(); return; /* DOA3: restored dropped fall-through to {tgt} */"]
+            + lines[close:])
+
+
+_CT_CALL = re.compile(r'\) \{ (sub_[0-9A-Fa-f]{8}(?:_gen)?\(\); return; \})')
+
+
+def fix_cond_tailcall_ebp(lines):
+    """Conditional tail calls sync g_seh_ebp, as unconditional ones do, in
+    functions that keep a local ebp (fpo callees inherit the frame)."""
+    if not any(re.match(r'^\s+uint32_t ebp(?: = [^;]+)?;', l) for l in lines):
+        return lines
+    out = []
+    for l in lines:
+        if ") { sub_" in l and "(); return; }" in l and "g_seh_ebp" not in l:
+            l = _CT_CALL.sub(r") { g_seh_ebp = ebp; \1", l)
+        out.append(l)
+    return out
+
+
+def fix_selfspins(lines):
+    """XDK busy-waits on hardware registers (`loc_X: if (MEM..) goto loc_X;`):
+    nothing behind most of those registers changes, so run them through."""
+    out = list(lines)
+    for i in range(len(out) - 2):
+        m = re.match(r'loc_([0-9A-Fa-f]{8}): ;', out[i].strip())
+        if not m:
+            continue
+        lab = m.group(1)
+        for j in (i + 1, i + 2):
+            if j >= len(out):
+                break
+            s = out[j].strip()
+            if not s:
+                continue
+            m2 = re.match(r'if \((.+)\) goto loc_' + lab + r'; (/\*.*\*/)?', s)
+            if m2 and "MEM" in m2.group(1):
+                indent = out[j][:len(out[j]) - len(out[j].lstrip())]
+                out[j] = (indent + "/* DOA3: hw busy-wait forced through (was: if ("
+                          + m2.group(1)[:70] + ") goto loc_" + lab + ") */")
+            break
+    return out
+
+
+# Deferred compares. The lifter emits cmp/test as a comment and re-evaluates
+# the operand expressions at the branch, so a write to an operand register in
+# between makes the branch test the wrong values. Such a site is rewritten to
+# evaluate the condition at the compare -- but only when the C-to-guest
+# mapping is unambiguous: one candidate in the C block, one qualifying
+# compare in the guest block, same kind and literal, no flag writer, call or
+# branch target in between.
+
+_DC_CMT = re.compile(r'/\* (cmp|test) (.+?) - flags set for next jcc \*/')
+_DC_CONS = re.compile(r'(CMP_[A-Z]+|TEST_[A-Z]+)\s*\(')
+_DC_LABEL = re.compile(r'^loc_([0-9A-Fa-f]{8}):')
+_DC_REGS = ("eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp")
+_DC_LITERAL = re.compile(r'^(?:0[xX][0-9A-Fa-f]+u?|\d+)$')
+_DC_FLAG_WRITERS = {
+    "add", "sub", "adc", "sbb", "and", "or", "xor", "cmp", "test", "inc", "dec",
+    "neg", "shl", "shr", "sar", "sal", "rol", "ror", "rcl", "rcr", "shld", "shrd",
+    "mul", "imul", "div", "idiv", "bt", "bts", "btr", "btc", "bsf", "bsr",
+    "xadd", "cmpxchg", "sahf", "popf", "popfd", "cmps", "cmpsb", "cmpsw", "cmpsd",
+    "scas", "scasb", "scasw", "scasd", "aaa", "aad", "aam", "aas", "daa", "das",
+    "comiss", "ucomiss", "comisd", "ucomisd", "clc", "stc", "cmc", "std", "cld",
+    "lock",
+}
+_DC_SUBREG = {
+    "al": ("eax", 0b0001), "ah": ("eax", 0b0010), "ax": ("eax", 0b0011), "eax": ("eax", 0b1111),
+    "bl": ("ebx", 0b0001), "bh": ("ebx", 0b0010), "bx": ("ebx", 0b0011), "ebx": ("ebx", 0b1111),
+    "cl": ("ecx", 0b0001), "ch": ("ecx", 0b0010), "cx": ("ecx", 0b0011), "ecx": ("ecx", 0b1111),
+    "dl": ("edx", 0b0001), "dh": ("edx", 0b0010), "dx": ("edx", 0b0011), "edx": ("edx", 0b1111),
+    "si": ("esi", 0b0011), "esi": ("esi", 0b1111),
+    "di": ("edi", 0b0011), "edi": ("edi", 0b1111),
+    "bp": ("ebp", 0b0011), "ebp": ("ebp", 0b1111),
+    "sp": ("esp", 0b0011), "esp": ("esp", 0b1111),
+}
+_DC_REG_RE = re.compile(r'\b(e?[abcd]x|[abcd][lh]|e?(?:si|di|bp|sp))\b')
+_DC_INSN = re.compile(r'^\s{2}0x([0-9A-Fa-f]{8})\s{2}[0-9a-fA-F]+\s+(\S+)\s*(.*?)\s*$')
+_DC_ASM = None
+
+
+def _dc_guest():
+    """Guest listing (tools/disasm/output/asm): address -> (mnemonic,
+    operands), and the addresses other code branches to."""
+    global _DC_ASM
+    if _DC_ASM is None:
+        asm_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                               "disasm", "output", "asm")
+        insns, labelled = {}, set()
+        for path in glob.glob(os.path.join(asm_dir, "*.asm")):
+            pending = False
+            for line in open(path, encoding="utf-8", errors="replace"):
+                stripped = line.strip()
+                if stripped.startswith("; XREF:") or \
+                   re.match(r'^(sub|loc)_[0-9A-Fa-f]{8}:', stripped):
+                    pending = True
+                    continue
+                m = _DC_INSN.match(line)
+                if m:
+                    a = int(m.group(1), 16)
+                    insns[a] = (m.group(2).lower(), m.group(3))
+                    if pending:
+                        labelled.add(a)
+                    pending = False
+        _DC_ASM = (insns, labelled, sorted(insns))
+    return _DC_ASM
+
+
+def _dc_reg_mask(optext):
+    out = {}
+    for m in _DC_REG_RE.finditer(optext):
+        full, mask = _DC_SUBREG[m.group(1)]
+        out[full] = out.get(full, 0) | mask
+    return out
+
+
+def _dc_writes_of(mnem, optext):
+    out = {}
+    if mnem == "push":
+        return {"esp": 0b1111}
+    if mnem == "pop":
+        out["esp"] = 0b1111
+        m = _DC_REG_RE.fullmatch(optext.split(",")[0].strip())
+        if m:
+            full, mask = _DC_SUBREG[m.group(1)]
+            out[full] = out.get(full, 0) | mask
+        return out
+    if mnem.startswith(("mov", "lea", "cmov", "set", "xchg")):
+        parts = [p.strip() for p in optext.split(",")]
+        m = _DC_REG_RE.fullmatch(parts[0]) if parts else None
+        if m:
+            full, mask = _DC_SUBREG[m.group(1)]
+            out[full] = out.get(full, 0) | (0b1111 if mnem in ("movzx", "movsx") else mask)
+        if mnem == "xchg" and len(parts) > 1:
+            m2 = _DC_REG_RE.fullmatch(parts[1])
+            if m2:
+                full, mask = _DC_SUBREG[m2.group(1)]
+                out[full] = out.get(full, 0) | mask
+    return out
+
+
+def _dc_guest_sites(start_va, end_va):
+    import bisect
+    insns, labelled, order = _dc_guest()
+    addrs = order[bisect.bisect_left(order, start_va):bisect.bisect_left(order, end_va)]
+    found = []
+    for i, a in enumerate(addrs):
+        mnem, ops = insns[a]
+        if mnem not in ("cmp", "test"):
+            continue
+        need = _dc_reg_mask(ops)
+        if not need:
+            continue
+        clobber = None
+        for k in range(i + 1, len(addrs)):
+            b = addrs[k]
+            bm, bops = insns[b]
+            if b in labelled or bm == "call":
+                break
+            if (bm.startswith("j") and bm != "jmp") or bm.startswith(("set", "cmov")):
+                if clobber:
+                    found.append((mnem, ops, clobber))
+                break
+            if bm in _DC_FLAG_WRITERS:
+                break
+            for r, mask in _dc_writes_of(bm, bops).items():
+                if need.get(r, 0) & mask:
+                    clobber = r
+                    break
+    return found
+
+
+def _dc_split_ops(s):
+    depth, out, cur = 0, [], ""
+    for ch in s:
+        if ch == "(":
+            depth += 1
+        if ch == ")":
+            depth -= 1
+        if ch == "," and depth == 0:
+            out.append(cur.strip())
+            cur = ""
+        else:
+            cur += ch
+    out.append(cur.strip())
+    return out
+
+
+def _dc_c_writes_of(line):
+    w = set()
+    m = re.match(r'\s*(eax|ebx|ecx|edx|esi|edi|ebp|esp)\s*(?:[-+*|&^]|>>|<<)?=[^=]', line)
+    if m:
+        w.add(m.group(1))
+    for m in re.finditer(r'SET_LO(?:8|16)\((\w+),', line):
+        if m.group(1) in _DC_REGS:
+            w.add(m.group(1))
+    for m in re.finditer(r'POP32\(\s*(\w+)\s*,\s*(\w+)\s*\)', line):
+        for g in (m.group(1), m.group(2)):
+            if g in _DC_REGS:
+                w.add(g)
+    if "PUSH32(" in line:
+        w.add("esp")
+    if re.search(r'\b(sub_[0-9A-Fa-f]{6}\w*|xbox_\w+)\s*\(', line):
+        w |= {"eax", "ecx", "edx"}
+    return w
+
+
+def _dc_run_ends(line):
+    s = line.strip()
+    return bool(_DC_LABEL.match(s) or s in ("}", "};") or s.startswith("goto ")
+                or s.startswith("return") or re.match(r'^\}\s*$', s))
+
+
+def fix_deferred_cmp(lines, start, end):
+    labels = [(i, int(m.group(1), 16)) for i, l in enumerate(lines)
+              for m in [_DC_LABEL.match(l.strip())] if m]
+    end_of = {}
+    for k, (i, a) in enumerate(labels):
+        end_of[i] = labels[k + 1][1] if k + 1 < len(labels) else end
+    cands, block, seen = [], None, {}
+    for i, line in enumerate(lines):
+        m = _DC_LABEL.match(line.strip())
+        if m:
+            block = (i, int(m.group(1), 16), end_of[i])
+        mc = _DC_CMT.search(line)
+        if not mc or block is None:
+            continue
+        key = f"{mc.group(1)} {mc.group(2)}"
+        nth = seen.get(key, 0)
+        seen[key] = nth + 1
+        if (start, key, nth) in DEFERRED_CMP_UNFIXED:
+            continue
+        cops = [o.strip() for o in _dc_split_ops(mc.group(2))]
+        need = set()
+        for o in cops:
+            need |= {r for r in _DC_REGS if re.search(r'\b%s\b' % r, o)}
+        if not need:
+            continue
+        clob = False
+        for j in range(i + 1, len(lines)):
+            l2 = lines[j]
+            mcons = _DC_CONS.search(l2)
+            if mcons:
+                tail = l2[mcons.start():]
+                depth, e = 0, None
+                for k, ch in enumerate(tail):
+                    if ch == "(":
+                        depth += 1
+                    elif ch == ")":
+                        depth -= 1
+                        if depth == 0:
+                            e = k + 1
+                            break
+                if e is None:
+                    break
+                cond = tail[:e]
+                bops = [o.strip() for o in _dc_split_ops(cond[cond.index("(") + 1:-1])]
+                if bops == cops and clob:
+                    cands.append(dict(cmt=i, br=j, cond=cond, kind=mc.group(1),
+                                      cops=cops, block=block))
+                break
+            if _DC_CMT.search(l2) or _dc_run_ends(l2):
+                break
+            if _dc_c_writes_of(l2) & need:
+                clob = True
+    if not cands:
+        return lines
+    by_block = {}
+    for c in cands:
+        by_block.setdefault(c["block"][0], []).append(c)
+    edits = []
+    for group in by_block.values():
+        if len(group) != 1:
+            continue
+        c = group[0]
+        g = _dc_guest_sites(c["block"][1], c["block"][2])
+        if len(g) != 1 or g[0][0] != c["kind"]:
+            continue
+        gtail = [o.strip() for o in g[0][1].split(",")][-1]
+        ctail = c["cops"][-1]
+        if _DC_LITERAL.match(gtail) and _DC_LITERAL.match(ctail):
+            if int(gtail, 0) != int(ctail.rstrip("uU"), 0):
+                continue
+        edits.append(c)
+    if not edits:
+        return lines
+    var = "_rcc" if start in BUG14_LATCH_FUNCS else "_rccf"
+    out = list(lines)
+    note = ("  /* DOA3: x86 latched these flags at the compare above and the "
+            "branch below reads them, but an operand is overwritten in "
+            "between -- evaluate the condition where the guest does. */")
+    for c in edits:
+        indent = re.match(r'\s*', lines[c["cmt"]]).group(0)
+        out[c["cmt"]] = lines[c["cmt"]] + "\n" + indent + var + " = (" + c["cond"] + ");" + note
+        out[c["br"]] = out[c["br"]].replace(c["cond"], var, 1)
+    k = out.index("{")
+    out[k] = out[k] + f"\n    int {var} = 0; /* DOA3: deferred condition evaluated at the compare */"
+    return out
+
+
+
+
+def _manual_defined():
+    """Functions the hand-written sources (src/, outside gen/) define."""
+    src = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src")
+    gen = os.path.normpath(os.path.join(src, "game", "recomp", "gen"))
+    out = set()
+    for f in glob.glob(os.path.join(src, "**", "*.c"), recursive=True):
+        if os.path.normpath(f).startswith(gen):
+            continue
+        text = open(f, encoding="utf-8", errors="ignore").read()
+        out.update(re.findall(r"\bvoid\s+(sub_[0-9A-Fa-f]{8})\s*\(\s*void\s*\)\s*\{", text))
+        out.update(re.findall(r"\w+\((sub_[0-9A-Fa-f]{8})[,)]", text))
+    return out
+
+
+_CTOR_PRE = '/* Direct lookup for the initializer tables.\n *\n * Deliberately local rather than added to recomp_dispatch.c: that table is\n * binary-searched with a curated size, and editing it would change which\n * indirect-call targets resolve across the whole game. These entries are only\n * ever needed by the _initterm walk in main.c. */\ntypedef void (*doa3_ctor_fn)(void);   /* matches recomp_func_t */\n'
+_CTOR_POST = '};\n\ndoa3_ctor_fn doa3_crt_lookup(uint32_t va)\n{\n    size_t i;\n    for (i = 0; i < sizeof(g_doa3_ctors) / sizeof(g_doa3_ctors[0]); i++)\n        if (g_doa3_ctors[i].va == va)\n            return g_doa3_ctors[i].fn;\n    return 0;\n}\n'
+
+
+def _cond_operands(cond):
+    """Operands of a lifted condition, as written in its compare comment."""
+    c = cond.strip()
+    m = re.match(r'^\(?(CMP_[A-Z]+|TEST_[A-Z]+)\((.*)\)\)?$', c)
+    if m:
+        ops = [o.strip() for o in _dc_split_ops(m.group(2))]
+        # `test a, b` + signed jcc is lifted as CMP_xx(a & b, 0)
+        if len(ops) == 2 and ops[1] == "0" and " & " in ops[0]:
+            ops = [o.strip() for o in ops[0].split(" & ", 1)]
+        return ops
+    m = re.match(r'^\(*\(int(?:8|16|32)_t\)\((.*) & (.*)\) [<>=]+ 0\)*$', c)
+    if m:
+        return [m.group(1).strip(), m.group(2).strip()]
+    if "X86_PF8((" in c and ") & (" in c:
+        i = c.index("X86_PF8((") + 9
+        j = c.index(") & (", i)
+        rest = c[j + 5:]
+        return [c[i:j].strip(), rest[:rest.index(")")].strip()]
+    return None
+
+
+# A conditional jump, or a setcc, consuming the flags.
+_CF_COND = re.compile(r'^(\s*)if \((.*)\) (goto loc_\w+;|\{.*\}|\(void\)0;)(.*)$')
+_CF_SETCC = re.compile(r'^(\s*)(SET_LO8\(\w+, )\((.*)\)( \? 1 : 0\);)(.*)$')
+# An arithmetic flag setter: its flags come from the register's new value.
+_CF_ARITH = re.compile(r'^\s*(eax|ebx|ecx|edx|esi|edi|ebp)(?: = \1 [-+&|^] [^;]+|\+\+|--);')
+
+
+def _consumer(line):
+    """(prefix, condition, suffix) of a flag consumer line, or None."""
+    m = _CF_COND.match(line)
+    if m:
+        return f"{m.group(1)}if (", m.group(2), f") {m.group(3)}{m.group(4)}"
+    m = _CF_SETCC.match(line)
+    if m:
+        return f"{m.group(1)}{m.group(2)}(", m.group(3), f"){m.group(4)}{m.group(5)}"
+    return None
+
+
+def fix_clobbered_flags(lines, start):
+    """A flag setter whose operand register is written before the consumer
+    that reads its flags, in the same straight-line run: x86 latched the
+    flags at the setter, the lifted consumer re-reads the new value.
+    Evaluate the condition at the setter (recomp bug #14). Setters are
+    cmp/test (by their comment) and arithmetic on a register; consumers are
+    conditional jumps and setcc, in every condition form the lifter writes,
+    including `fnstsw ax; test ah, N; jp`, which fix_deferred_cmp does not."""
+    text = "\n".join(lines).split("\n")
+    seen, edits = {}, []
+    for i, l in enumerate(text):
+        mc = _DC_CMT.search(l)
+        ma = None if mc else _CF_ARITH.match(l)
+        if not mc and not ma:
+            continue
+        key = f"{mc.group(1)} {mc.group(2)}" if mc else l.strip().split(";")[0]
+        nth = seen.get(key, 0)
+        seen[key] = nth + 1
+        if (start, key, nth) in CLOBBERED_FLAGS_UNFIXED:
+            continue
+        if mc:
+            cops = [o.strip() for o in _dc_split_ops(mc.group(2))]
+            need = set()
+            for o in cops:
+                need |= {r for r in _DC_REGS if re.search(r'\b%s\b' % r, o)}
+        else:
+            reg = ma.group(1)
+            need = {reg}
+        clob = False
+        for j in range(i + 1, len(text)):
+            c = _consumer(text[j])
+            if c:
+                cond = c[1]
+                if mc:
+                    ok = _cond_operands(cond) == cops
+                else:
+                    ok = (re.fullmatch(r'\(*(?:\(int(?:8|16|32)_t\))?%s [=!<>]+ 0\)*' % reg, cond.strip())
+                          is not None)
+                if ok and clob:
+                    edits.append((i, j, c))
+                break
+            if _DC_CMT.search(text[j]) or _dc_run_ends(text[j]) or _CF_ARITH.match(text[j]):
+                break
+            if _dc_c_writes_of(text[j]) & need:
+                clob = True
+    if not edits:
+        return text
+    for i, j, (pre, cond, post) in reversed(edits):
+        indent = re.match(r'\s*', text[j]).group(0)
+        text[j] = f"{pre}_rcc{post}"
+        text.insert(i + 1, f"{indent}_rcc = ({cond});  /* DOA3 bug #14: flags evaluated where x86 evaluates them */")
+    k = text.index("{")
+    text.insert(k + 1, "    int _rcc = 0; /* DOA3 bug #14: condition evaluated at the compare */")
+    return text
+
+
+_RCF = {"je": "JE", "jz": "JE", "jne": "JNE", "jnz": "JNE", "jb": "JB", "jae": "JAE",
+        "jbe": "JBE", "ja": "JA", "jl": "JL", "jge": "JGE", "jle": "JLE", "jg": "JG",
+        "js": "JS", "jns": "JNS", "jo": "JO", "jno": "JNO", "jp": "JP", "jnp": "JNP"}
+_EF = re.compile(r'^(\s*if \()_flags( /\* (\w+): )')
+
+
+def _sets_flags(s):
+    """A lifted statement that changes the flags or makes them unknown."""
+    return bool(re.search(r'PUSH32\(esp, 0\); (sub_|RECOMP_)|_cf = |_dividend|_fpu_cmp = |'
+                          r'\+\+|--|^(\w+) = \2 [-+&|^]|<<|>>', s)
+                or re.match(r'^(SET_LO8|SET_LO16|SET_HI8)\((\w+), (LO8|LO16|HI8)\(\2\) [-+&|^]', s))
+
+
+def fix_entry_flags(lines):
+    """A branch at the start of a fragment, before any compare in it, reads
+    the flags of whoever jumped or fell into it: the lifter has no setter
+    and emits `if (_flags ...)`, which is never taken. Read the flags the
+    caller recorded (RC_F_*, recomp_types.h) instead."""
+    text = "\n".join(lines).split("\n")
+    body = text.index("{")
+    labels = 0
+    found = False
+    for k in range(body + 1, len(text)):
+        s = text[k].strip()
+        if re.match(r'^loc_[0-9A-Fa-f]{8}: ;', s):
+            labels += 1
+            if labels > 1:
+                break
+            continue
+        if not labels:
+            continue                     # declarations before the entry label
+        if _DC_CMT.search(s) or s.startswith("goto ") or "return;" in s and not s.startswith("if"):
+            break
+        m = _EF.match(text[k])
+        if m and m.group(3) in _RCF:
+            text[k] = _EF.sub(lambda mm: f"{mm.group(1)}RC_F_{_RCF[mm.group(3)]}(){mm.group(2)}", text[k])
+            found = True
+        elif re.match(r'^\s*if \(', text[k]) or _sets_flags(s):
+            break
+    return text, found
+
+
+def fix_flag_stores(code, readers):
+    """Before a tail call or fall-through into a function in `readers`, the
+    compare that sets the flags records its operands (RC_SETF_CMP/TEST)."""
+    lines = code.split("\n")
+    out = list(lines)
+    for j, l in enumerate(lines):
+        m = re.search(r'\bsub_([0-9A-Fa-f]{8})\(\); return;', l)
+        if not m or int(m.group(1), 16) not in readers or "PUSH32(esp, 0); sub_" in l:
+            continue
+        for i in range(j - (0 if l.strip().startswith("if") else 1), -1, -1):
+            s = lines[i].strip()
+            mc = _DC_CMT.search(s)
+            if mc and s.startswith("/*"):
+                ops = _dc_split_ops(mc.group(2))
+                kind = "CMP" if mc.group(1) == "cmp" else "TEST"
+                if len(ops) == 2 and "RC_SETF" not in out[i]:
+                    indent = lines[i][:len(lines[i]) - len(lines[i].lstrip())]
+                    out[i] = f"{indent}RC_SETF_{kind}({ops[0]}, {ops[1]});   {s}"
+                break
+            if (re.match(r'^loc_[0-9A-Fa-f]{8}: ;', s) or s.startswith("goto ")
+                    or (s.endswith("return;") and not s.startswith("if"))):
+                break
+    return "\n".join(out)
+
+
+_FOLD_CMP = {"je": "CMP_EQ", "jne": "CMP_NE", "jb": "CMP_B", "jae": "CMP_AE", "jbe": "CMP_BE",
+             "ja": "CMP_A", "jl": "CMP_L", "jge": "CMP_GE", "jle": "CMP_LE", "jg": "CMP_G"}
+_FOLD_TEST = {"je": "TEST_Z", "jne": "TEST_NZ"}
+_FOLD_JCC = re.compile(r'^(\s*)if \((.*)\) (goto loc_\w+;|\{.*\}) /\* (\w+): ([^*]*)\*/')
+
+
+def fix_shared_jcc(lines, start, is_jcc_at=None):
+    """MSVC shares one conditional jump between paths that set its flags
+    differently (`cmp a,1 / jmp L / ... cmp a,2 / L: jne X`); the lifter
+    builds L's condition from the compare above L only. At each `jmp L` that
+    follows its own compare, evaluate L's jump there with this path's
+    operands and branch to its targets directly. Only when the instruction
+    at L really is the jump: a `test`/`cmp` at L sets its own flags (the
+    lifter folds it into the condition), and is_jcc_at says which."""
+    text = "\n".join(lines).split("\n")
+    label_at = {}
+    for k, l in enumerate(text):
+        m = re.match(r'^loc_([0-9A-Fa-f]{8}): ;', l.strip())
+        if m:
+            label_at[m.group(1).upper()] = k
+    out = list(text)
+    for j, l in enumerate(text):
+        m = re.match(r'^(\s*)goto loc_([0-9A-Fa-f]{8});\s*$', l)
+        if not m or m.group(2).upper() not in label_at:
+            continue
+        # the compare that sets this path's flags, right above the goto
+        i = j - 1
+        while i >= 0 and not text[i].strip():
+            i -= 1
+        mc = _DC_CMT.search(text[i]) if i >= 0 else None
+        ma = None if mc else (_CF_ARITH.match(text[i]) if i >= 0 else None)
+        if not ma and (not mc or not text[i].strip().startswith("/*")):
+            continue
+        key = (start, int(m.group(2), 16))
+        if key in (SHARED_JCC_ARITH_UNFIXED if ma else SHARED_JCC_UNFIXED):
+            continue
+        # the shared jump: first statement at the label
+        k = label_at[m.group(2).upper()] + 1
+        while k < len(text) and not text[k].strip():
+            k += 1
+        mj = _FOLD_JCC.match(text[k]) if k < len(text) else None
+        if not mj:
+            continue
+        if is_jcc_at is not None and not is_jcc_at(int(m.group(2), 16)):
+            continue
+        if ma:
+            # flags from an arithmetic result: only ZF is reproduced
+            op = {"je": "==", "jz": "==", "jne": "!=", "jnz": "!="}.get(mj.group(4))
+            if not op:
+                continue
+            cond = f"({ma.group(1)} {op} 0)"
+        else:
+            table = _FOLD_CMP if mc.group(1) == "cmp" else _FOLD_TEST
+            macro = table.get(mj.group(4))
+            if not macro:
+                continue
+            cond = None
+        nxt = next((n for n in range(k + 1, len(text))
+                    if re.match(r'^loc_[0-9A-Fa-f]{8}: ;', text[n].strip())), None)
+        if nxt is None:
+            continue
+        if cond is None:
+            ops = ", ".join(o.strip() for o in _dc_split_ops(mc.group(2)))
+            cond = f"{macro}({ops})"
+        if cond == mj.group(2).strip():
+            continue                     # same flags on both paths: nothing to fold
+        nlab = text[nxt].strip()[:12]
+        out[j] = (f"{m.group(1)}if ({cond}) {mj.group(3)} /* {mj.group(4)}: shared jump "
+                  f"at loc_{m.group(2)}, this path's flags */\n{m.group(1)}goto {nlab};")
+    return "\n".join(out).split("\n")
+
+
+def apply_hand_edits(lines, hunks):
+    """Replace runs of lifted lines with the hand-edited ones (HAND_EDITS)."""
+    text = "\n".join(lines).split("\n")
+    body = text.index("{")
+    found = []
+    for old, new, nth in hunks:
+        old = list(old)
+        hits = [k for k in range(body, len(text)) if text[k:k + len(old)] == old]
+        if nth >= len(hits):
+            raise ValueError(f"hand edit no longer applies: {old[0][:60]!r}")
+        found.append((hits[nth], len(old), list(new)))
+    for k, n, new in sorted(found, reverse=True):
+        text[k:k + n] = new
+    # latch variables an edit uses must be declared
+    for var in ("_rcc", "_rccf"):
+        used = any(re.search(r'\b%s\b' % var, l) for l in text[body:])
+        declared = any(re.match(r'\s*int %s = 0;' % var, l) for l in text[body:])
+        if used and not declared:
+            text.insert(body + 1, f"    int {var} = 0; /* latched flags */")
+    return text
+
+
 class FunctionTranslator:
     """Translates individual x86 functions to C source code."""
 
@@ -109,6 +789,10 @@ class FunctionTranslator:
         self.classification_db = classification_db or {}
         self.abi_db = abi_db or {}
         self.disasm = Disassembler()
+        # Functions from here on (chunks recomp_0010.c onward) get their
+        # hardware busy-waits run through; set by the batch translator.
+        self.selfspin_from = 1 << 32
+        self.last_entry_flags = False
         self.lifter = Lifter(func_db=func_db, label_db=label_db, abi_db=abi_db, xbe_data=xbe_data)
 
     def _read_func_bytes(self, start_va, end_va):
@@ -120,6 +804,13 @@ class FunctionTranslator:
         if offset + size > len(self.xbe_data):
             return None
         return self.xbe_data[offset:offset + size]
+
+    def _is_jcc_at(self, va):
+        """Is the instruction at va a conditional jump (short or near)?"""
+        b = self._read_func_bytes(va, va + 2)
+        if not b or len(b) < 2:
+            return True
+        return 0x70 <= b[0] <= 0x7F or (b[0] == 0x0F and 0x80 <= b[1] <= 0x8F)
 
     def _determine_calling_convention(self, func_info):
         """Guess calling convention from function properties."""
@@ -177,7 +868,7 @@ class FunctionTranslator:
         # targets before it, extend the lift range to the table start (bodies
         # end where the table begins) and re-disassemble. Repeat to fixpoint
         # (an extended body can contain another switch).
-        for _ in range(8):
+        for _ in range(0 if start in LEGACY_NO_JT_EXTEND_FUNCS else 8):
             new_end = end
             for insn in instructions:
                 if insn.mnemonic != "jmp" or insn.jump_target or not insn.operands:
@@ -241,7 +932,14 @@ class FunctionTranslator:
         used_regs = self._find_used_registers(instructions)
         used_xmm = self._find_used_xmm(instructions)
         has_prologue = self._func_has_prologue(instructions)
-        has_fpu = any(insn.mnemonic.startswith("f") for insn in instructions)
+        # An inlined _ftol2 (call, or a tail jump the lifter inlines) pops the
+        # x87 stack too, so it needs the fp_* macros even with no x87 opcode.
+        has_fpu = any(insn.mnemonic.startswith("f")
+                      or (insn.mnemonic == "call" and insn.call_target == FTOL2_ADDR
+                          and start not in LEGACY_FTOL2_CALL_FUNCS)
+                      or (insn.mnemonic == "jmp" and insn.jump_target == FTOL2_ADDR
+                          and start in FTOL2_TAIL_INLINE_FUNCS)
+                      for insn in instructions)
 
         # Volatile registers (eax, ecx, edx, esp) are globals - don't declare
         # them as locals. The RECOMP_GENERATED_CODE #define maps register names
@@ -300,8 +998,11 @@ class FunctionTranslator:
             lines.append(f" * Frame: {frame_type}")
         lines.append(f" */")
 
-        # Function signature
-        lines.append(f"{ret_type} {name}({param_str})")
+        # Function signature. Bodies recomp_manual.c replaces or wraps get
+        # the name it calls them by (sub_X_gen), or are kept under #if 0.
+        if start in IF0_BODIES and start not in BODY_SUFFIX:
+            lines.append(f"#if 0  /* DOA3: {name} overridden in recomp_manual.c */")
+        lines.append(f"{ret_type} {name}{BODY_SUFFIX.get(start, '')}({param_str})")
         lines.append(f"{{")
 
         # ebp is the only callee-saved register declared as a local.
@@ -472,6 +1173,23 @@ class FunctionTranslator:
                     lines.insert(sig_idx + 2,
                                  "    ebp = g_seh_ebp; /* fpo_leaf: inherit caller's frame */")
 
+        if start in IF0_BODIES and start not in BODY_SUFFIX:
+            lines.insert(len(lines) - 1, "#endif")
+        # Post-lift fixes, in the order they were run over the generated tree.
+        lines = fix_carrier(lines, start)
+        lines = fix_fallthrough(lines, start, end, self.func_db)
+        lines = fix_cond_tailcall_ebp(lines)
+        lines = fix_deferred_cmp(lines, start, end)
+        lines = fix_clobbered_flags(lines, start)
+        lines = fix_shared_jcc(lines, start, self._is_jcc_at)
+        if start in ENTRY_FLAGS_UNFIXED:
+            self.last_entry_flags = False
+        else:
+            lines, self.last_entry_flags = fix_entry_flags(lines)
+        if start >= self.selfspin_from:
+            lines = fix_selfspins(lines)
+        if start in HAND_EDITS:
+            lines = apply_hand_edits(lines, HAND_EDITS[start])
         return "\n".join(lines)
 
     def _find_used_registers(self, instructions):
@@ -734,6 +1452,10 @@ class BatchTranslator:
             "total_lines": 0,
         }
 
+        if len(func_list) > 10 * chunk_size:
+            self.translator.selfspin_from = func_list[10 * chunk_size][0]
+        func_list = [f for f in func_list if f[0] not in NOT_EMITTED]
+        entry_readers = set()
         for i, (addr, func_info) in enumerate(func_list):
             name = func_info.get("name", f"sub_{addr:08X}")
             if verbose and (i % 500 == 0 or i == len(func_list) - 1):
@@ -741,6 +1463,8 @@ class BatchTranslator:
                       file=sys.stderr)
 
             code = self.translator.translate_function(addr, func_info)
+            if code and self.translator.last_entry_flags:
+                entry_readers.add(addr)
             if code:
                 translations.append((addr, name, code))
                 stats["translated"] += 1
@@ -751,6 +1475,16 @@ class BatchTranslator:
                 stub += f"void {name}(void) {{ /* translation failed */ }}\n"
                 translations.append((addr, name, stub))
                 stats["failed"] += 1
+
+        # Flags carried into fragments: the compares that hand off to a
+        # function reading its caller's flags record them (RC_SETF_*).
+        readers = {a for a in entry_readers}
+        translations = [(a, n, fix_flag_stores(code, readers)) for a, n, code in translations]
+
+        # Entry points only data refers to: hand-written bodies.
+        for addr, code in sorted(SEED_BODIES.items()):
+            translations.append((addr, f"sub_{addr:08X}", code + "\n"))
+        translations.sort(key=lambda x: x[0])
 
         # Generate header with all forward declarations
         header_path = os.path.join(output_dir, header_name)
@@ -791,6 +1525,7 @@ class BatchTranslator:
                 "#define RECOMP_GENERATED_CODE",
                 f'#include "{header_name}"',
                 '#include <math.h>',
+                '#include <stdio.h>',
                 "",
             ]
             for addr, name, code in chunk:
@@ -808,6 +1543,37 @@ class BatchTranslator:
         dispatch_path = os.path.join(output_dir, f"{prefix}_dispatch.c")
         self._write_dispatch_table(translations, dispatch_path, header_name)
         generated_files.append(dispatch_path)
+
+        # CRT static initializers: looked up directly by main.c's _initterm walk.
+        ctor_path = os.path.join(output_dir, f"{prefix}_ctors.c")
+        with open(ctor_path, "w", encoding="utf-8") as f:
+            f.write("#define RECOMP_GENERATED_CODE\n")
+            f.write(f'#include "{header_name}"\n#include <stdio.h>\n#include <math.h>\n\n')
+            f.write(_CTOR_PRE)
+            f.write("static const struct { uint32_t va; doa3_ctor_fn fn; } g_doa3_ctors[] = {\n")
+            for a in CRT_INIT_FUNCS:
+                f.write(f"    {{ 0x{a:08X}u, sub_{a:08X} }},\n")
+            f.write(_CTOR_POST)
+        generated_files.append(ctor_path)
+
+        # Stubs for call targets nothing defines (garbage decoded as code
+        # calls into the void); they log the first few calls.
+        defined = {name for _, name, _ in translations}
+        called = set()
+        for _, _, code in translations:
+            called.update(re.findall(r"\b(sub_[0-9A-Fa-f]{8})\(\);", code))
+        manual = _manual_defined()
+        missing = sorted(n for n in called - defined if n not in manual)
+        stub_path = os.path.join(output_dir, f"{prefix}_stubs.c")
+        with open(stub_path, "w", encoding="utf-8") as f:
+            f.write("/* Auto-generated stubs for undefined call targets "
+                    "(out-of-section garbage + failed translations). */\n")
+            f.write("#define RECOMP_GENERATED_CODE\n")
+            f.write(f'#include "{header_name}"\n#include <stdio.h>\n\n')
+            for n in missing:
+                f.write(f'void {n}(void) {{ static int n=0; if(n++<5) '
+                        f'fprintf(stderr, "[STUB] {n} called\\n"); }}\n')
+        generated_files.append(stub_path)
 
         stats["files"] = generated_files
         stats["num_chunks"] = len(chunks)
@@ -843,13 +1609,16 @@ class BatchTranslator:
         ]
 
         for addr, name, _ in translations:
+            if addr in DISPATCH_EXCLUDE:
+                continue
             lines.append(f"    {{ 0x{addr:08X}u, (recomp_func_t){name} }},")
 
         lines.extend([
             "};",
             "",
             f"static const size_t g_recomp_table_size = "
-            f"{len(translations)};",
+            + (f"{DISPATCH_SEARCH_LIMIT};" if DISPATCH_SEARCH_LIMIT is not None
+               else "sizeof g_recomp_table / sizeof g_recomp_table[0];"),
             "",
             "/* Binary search for a function by Xbox VA */",
             "recomp_func_t recomp_lookup(uint32_t xbox_va)",

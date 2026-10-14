@@ -1280,6 +1280,11 @@ void mcpx_apu_vp_frame(MCPXAPUState *d,
             }
 
             uint16_t v = cur;
+            if (v >= MCPX_HW_MAX_VOICES) {
+                /* Not a voice the hardware has: */
+                DPRINTF("Voice list contains invalid entry!\n");
+                break;
+            }
             uint16_t nxt = (uint16_t)voice_get_mask(d, v, NV_PAVS_VOICE_TAR_PITCH_LINK,
                                NV_PAVS_VOICE_TAR_PITCH_LINK_NEXT_VOICE_HANDLE);
             if (nxt == v) nxt = 0xFFFF;   /* self-linked: treat as end of list */

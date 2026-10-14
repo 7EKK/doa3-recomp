@@ -1,4 +1,5 @@
 /* Cooperative fiber scheduler — see xbox_fiber.h. */
+#include "doa3_guest.h"
 #include "xbox_fiber.h"
 #include "xbox_det.h"
 #include "xbox_memory_layout.h"          /* xbox_HeapAlloc */
@@ -189,7 +190,7 @@ int xbox_fiber_workers_ready(void)
          * READY; counting it meant "until idle" always ran to its cap, and
          * within that budget the file server's progress on a load depended
          * on how much music streaming was queued ahead of it. */
-        if (g_fib[i].ctx1 == 0x0016A530u) continue;
+        if (g_fib[i].ctx1 == g_guest->cri_watchdog_thread) continue;
         if (g_fib[i].state == FIB_READY) return 1;
     }
     return 0;
@@ -373,6 +374,7 @@ void xbox_fiber_block(uint32_t event_va)
     } else {
         n = pick_next(me);
     }
+    if (n < 0 && g_xbox_det_active) { xbox_fiber_wake(XBOX_DET_VBLANK_KEY); n = pick_next(me); }
     if (n < 0) {
         /* Nobody runnable. Wake all waiters to avoid a hard deadlock; they will
          * re-check their own condition and block again if still unsatisfied. */
@@ -517,6 +519,8 @@ int xbox_fiber_is_primary(void)
 {
     return g_active && g_cur == 0;
 }
+
+uint32_t xbox_fiber_current_ctx1(void) { return g_active ? g_fib[g_cur].ctx1 : 0; }
 
 int xbox_fiber_current(void)
 {
